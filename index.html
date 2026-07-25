@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estúdio Melódico & Gerador MIDI</title>
+    <script src="https://cdn.jsdelivr.net/npm/midi-writer-js@2.1.4/build/index.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f1117 0%, #1a1e29 100%);
+            --panel-bg: rgba(26, 30, 42, 0.75);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --accent-primary: #6366f1;
+            --accent-secondary: #0ea5e9;
+            --accent-success: #10b981;
+            --accent-success-hover: #059669;
+            --accent-danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --input-bg: rgba(15, 23, 42, 0.6);
+            --input-border: rgba(255, 255, 255, 0.12);
+            --card-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        }
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+        body { background: var(--bg-gradient); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 30px 15px; }
+        .app-card { background: var(--panel-bg); backdrop-filter: blur(16px); border: 1px solid var(--panel-border); border-radius: 20px; width: 100%; max-width: 680px; padding: 32px; box-shadow: var(--card-shadow); }
+        .app-header { text-align: center; margin-bottom: 28px; }
+        .app-header h1 { font-size: 1.8rem; font-weight: 700; background: linear-gradient(to right, #a5b4fc, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+        .app-header p { color: var(--text-muted); font-size: 0.9rem; }
+        .section-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-secondary); font-weight: 600; margin: 24px 0 14px 0; display: flex; align-items: center; gap: 8px; }
+        .section-title::after { content: ''; flex: 1; height: 1px; background: var(--panel-border); }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+        .input-row { display: flex; gap: 8px; align-items: center; }
+        select, input[type="text"], input[type="number"] { width: 100%; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 10px; padding: 11px 14px; color: var(--text-main); font-size: 0.92rem; outline: none; }
+        select:focus, input:focus { border-color: var(--accent-primary); }
+        .btn { background: #2a324b; color: #fff; border: 1px solid var(--panel-border); border-radius: 10px; padding: 11px 16px; font-size: 0.88rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; transition: all 0.2s; }
+        .btn:hover { background: #374151; transform: translateY(-1px); }
+        .btn-icon { padding: 11px; width: 44px; justify-content: center; background: rgba(255, 255, 255, 0.05); }
+        .btn-listen { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); }
+        .btn-listen:hover { background: rgba(99, 102, 241, 0.3); color: #fff; }
+        .btn-primary { background: var(--accent-success); color: #fff; width: 100%; padding: 14px; font-size: 1rem; margin-top: 10px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3); }
+        .btn-primary:hover { background: var(--accent-success-hover); }
+        .btn-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .btn-danger:hover { background: var(--accent-danger); color: #fff; }
+        .collapsible-panel { max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; opacity: 0; background: rgba(15, 23, 42, 0.8); border-radius: 12px; border: 1px solid transparent; margin-top: 0; }
+        .collapsible-panel.open { max-height: 220px; opacity: 1; padding: 14px; margin-top: 10px; border-color: var(--panel-border); }
+        .toast-audio { position: fixed; bottom: 24px; right: 24px; background: rgba(16, 185, 129, 0.9); color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 0.88rem; font-weight: 500; display: flex; align-items: center; gap: 10px; transform: translateY(100px); opacity: 0; transition: all 0.3s; backdrop-filter: blur(8px); }
+        .toast-audio.visible { transform: translateY(0); opacity: 1; }
+        .pulse-dot { width: 8px; height: 8px; background-color: #fff; border-radius: 50%; animation: pulse 1s infinite alternate; }
+        @keyframes pulse { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1.3); opacity: 1; } }
+    </style>
+</head>
+<body>
+<div class="app-card">
+    <div class="app-header">
+        <h1>Estúdio Melódico & Gerador MIDI</h1>
+        <p>Crie, personalize e pré-visualize permutações e frases musicais</p>
+    </div>
+    <div class="form-group grid-2">
+        <div>
+            <label>Tônica Principal</label>
+            <select id="tonica">
+                <option value="A">A (Lá)</option><option value="A#">A# / Bb</option><option value="B">B (Si)</option>
+                <option value="C">C (Dó)</option><option value="C#">C# / Db</option><option value="D">D (Ré)</option>
+                <option value="D#">D# / Eb</option><option value="E">E (Mi)</option><option value="F">F (Fá)</option>
+                <option value="F#">F# / Gb</option><option value="G">G (Sol)</option><option value="G#">G# / Ab</option>
+            </select>
+        </div>
+        <div>
+            <label>Oitava Base</label>
+            <input type="number" id="oitava" value="4" min="2" max="6">
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Escala</label>
+        <div class="input-row">
+            <select id="escala-select"></select>
+            <button class="btn btn-icon" title="Opções da Escala" onclick="toggleMenu('panel-escala')">⋮</button>
+            <button class="btn btn-listen" onclick="ouvirEscala()">▶ Ouvir Escala</button>
+        </div>
+        <div id="panel-escala" class="collapsible-panel">
+            <div class="form-group"><input type="text" id="esc-nome" placeholder="Nome da Escala"></div>
+            <div class="form-group"><input type="text" id="esc-formula" placeholder="Fórmula por graus"></div>
+            <div class="input-row">
+                <button class="btn" style="flex:1;" onclick="salvarEscala()">Salvar / Atualizar</button>
+                <button class="btn btn-danger" onclick="excluirEscala()">Excluir</button>
+            </div>
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Ritmo / Célula</label>
+        <div class="input-row">
+            <select id="ritmo-select"></select>
+            <button class="btn btn-icon" title="Opções de Ritmo" onclick="toggleMenu('panel-ritmo')">⋮</button>
+        </div>
+        <div id="panel-ritmo" class="collapsible-panel">
+            <div class="form-group"><input type="text" id="rit-nome" placeholder="Nome do Ritmo"></div>
+            <div class="form-group"><input type="text" id="rit-formula" placeholder="Sequência de figuras"></div>
+            <div class="input-row">
+                <button class="btn" style="flex:1;" onclick="salvarRitmo()">Salvar / Atualizar</button>
+                <button class="btn btn-danger" onclick="excluirRitmo()">Excluir</button>
+            </div>
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Padrão Melódico</label>
+        <div class="input-row">
+            <select id="padrao-select" onchange="atualizarFormulaInput()"></select>
+            <button class="btn btn-icon" title="Opções de Padrão" onclick="toggleMenu('panel-padrao')">⋮</button>
+            <button class="btn btn-listen" onclick="ouvirProgressao()">▶ Ouvir Progressão</button>
+        </div>
+        <div id="panel-padrao" class="collapsible-panel">
+            <div class="form-group"><input type="text" id="pad-nome" placeholder="Nome do Padrão"></div>
+            <div class="form-group"><input type="text" id="pad-formula-edit" placeholder="Fórmula por graus"></div>
+            <div class="input-row">
+                <button class="btn" style="flex:1;" onclick="salvarPadrao()">Salvar / Atualizar</button>
+                <button class="btn btn-danger" onclick="excluirPadrao()">Excluir</button>
+            </div>
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Fórmula Atual (Editável)</label>
+        <input type="text" id="padrao-formula" value="1,2,2#,3">
+    </div>
+    <div class="section-title">Configurações Globais</div>
+    <div class="grid-2 form-group">
+        <div>
+            <label>Nota Inicial (Escala)</label>
+            <select id="nota-inicial-select"></select>
+        </div>
+        <div>
+            <label>Direção</label>
+            <select id="direcao">
+                <option value="asc">Ascendente</option>
+                <option value="desc">Descendente</option>
+            </select>
+        </div>
+    </div>
+    <div class="grid-3 form-group">
+        <div><label>Compassos</label><input type="number" id="compassos" value="2" min="1" max="16"></div>
+        <div><label>BPM</label><input type="number" id="bpm" value="120" min="40" max="240"></div>
+        <div>
+            <label>Fórmula Compasso</label>
+            <select id="time-sig"><option value="4/4">4/4</option><option value="3/4">3/4</option><option value="6/8">6/8</option></select>
+        </div>
+    </div>
+    <button class="btn btn-primary" onclick="gerarEBaixarMIDI()">Gerar e Baixar MIDI</button>
+</div>
+<div id="toast-audio" class="toast-audio"><div class="pulse-dot"></div><span>Reproduzindo áudio...</span></div>
+
+<script>
+    let ESCALAS = {"Menor Harm\u00f4nica": "1,2,3b,4,5,6b,7", "Menor Natural (Ae\u00f3bia)": "1,2,3b,4,5,6b,7b", "Menor Mel\u00f3dica": "1,2,3b,4,5,6,7", "Maior (J\u00f4nica)": "1,2,3,4,5,6,7", "D\u00f3rica": "1,2,3b,4,5,6,7b", "Fr\u00edgia": "1,2b,3b,4,5,6b,7b", "L\u00eddia": "1,2,3,4#,5,6,7", "Mixol\u00eddia": "1,2,3,4,5,7b", "Blues": "1,3b,4,4#,5,7b", "Dominante Bebop": "1,2,3,4,5,6,7b,7", "H\u00fangara Menor": "1,2,3b,4#,5,6b,7"};
+    let RITMOS = {"Tercinas de Colcheia": "tercina", "Sextina (6 semicolcheias)": "sextina", "Sem\u00ednima (1t)": "seminima", "Sem\u00ednima Pontuada (1.5t)": "seminima_pontuada", "M\u00ednima (2t)": "minima", "M\u00ednima Pontuada (3t)": "minima_pontuada", "Colcheia Pontuada + Semicolcheia": "colcheia pontuada, semicolcheia", "Semicolcheia + Colcheia Pontuada": "semicolcheia, colcheia pontuada", "Colcheia + 2 Semicolcheias": "colcheia, semicolcheia, semicolcheia", "2 Semicolcheias + Colcheia": "semicolcheia, semicolcheia, colcheia", "Semicolcheia + Colcheia + Semicolcheia": "semicolcheia, colcheia, semicolcheia", "Sem\u00ednima Pontuada + Colcheia": "seminima pontuada, colcheia", "M\u00ednima Pontuada + Sem\u00ednima": "minima pontuada, seminima", "Sem\u00ednima + M\u00ednima Pontuada": "seminima, minima pontuada"};
+    let PADROES = {"Crom\u00e1tico Tenso": "1,2,2#,3", "Linear Simples": "1,2,3", "Salto de Ter\u00e7a (1-3-2-4)": "1,3,2,4", "Giro em Torno do Grau (1-2-1-7b)": "1,2,1,7b", "Aproxima\u00e7\u00e3o Inferior (7b-1-2-3)": "7b,1,2,3", "Arpejo Ascendente (1-3-5-7)": "1,3,5,7"};
+
+    const FREQS = {
+        'C2': 65.41, 'C#2': 69.30, 'D2': 73.42, 'D#2': 77.78, 'E2': 82.41, 'F2': 87.31, 'F#2': 92.50, 'G2': 98.00, 'G#2': 103.83, 'A2': 110.00, 'A#2': 116.54, 'B2': 123.47,
+        'C3': 130.81, 'C#3': 138.59, 'D3': 146.83, 'D#3': 155.56, 'E3': 164.81, 'F3': 174.61, 'F#3': 185.00, 'G3': 196.00, 'G#3': 207.65, 'A3': 220.00, 'A#3': 233.08, 'B3': 246.94,
+        'C4': 261.63, 'C#4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'E4': 329.63, 'F4': 349.23, 'F#4': 369.99, 'G4': 392.00, 'G#4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'B4': 493.88,
+        'C5': 523.25, 'C#5': 554.37, 'D5': 587.33, 'D#5': 622.25, 'E5': 659.25, 'F5': 698.46, 'F#5': 739.99, 'G5': 783.99, 'G#5': 830.61, 'A5': 880.00, 'A#5': 932.33, 'B5': 987.77
+    };
+    const MAIOR_SEMITONS = [0, 2, 4, 5, 7, 9, 11];
+    const NOTAS_BASE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+    function init() {
+        renderSelects();
+        atualizarNotasIniciais();
+        document.getElementById('tonica').addEventListener('change', atualizarNotasIniciais);
+        document.getElementById('escala-select').addEventListener('change', atualizarNotasIniciais);
+        document.getElementById('oitava').addEventListener('change', atualizarNotasIniciais);
+    }
+
+    function renderSelects() {
+        populateSelect('escala-select', ESCALAS);
+        populateSelect('ritmo-select', RITMOS);
+        populateSelect('padrao-select', PADROES);
+        atualizarFormulaInput();
+    }
+
+    function populateSelect(id, dict) {
+        const sel = document.getElementById(id);
+        const currVal = sel.value;
+        sel.innerHTML = '';
+        for (let key in dict) {
+            let opt = document.createElement('option');
+            opt.value = key;
+            opt.innerText = key;
+            sel.appendChild(opt);
+        }
+        if (dict[currVal]) sel.value = currVal;
+    }
+
+    function toggleMenu(panelId) {
+        const p = document.getElementById(panelId);
+        const isOpen = p.classList.contains('open');
+        document.querySelectorAll('.collapsible-panel').forEach(el => el.classList.remove('open'));
+        if (!isOpen) {
+            p.classList.add('open');
+            if (panelId === 'panel-escala') {
+                document.getElementById('esc-nome').value = document.getElementById('escala-select').value;
+                document.getElementById('esc-formula').value = ESCALAS[document.getElementById('escala-select').value] || '';
+            } else if (panelId === 'panel-ritmo') {
+                document.getElementById('rit-nome').value = document.getElementById('ritmo-select').value;
+                document.getElementById('rit-formula').value = RITMOS[document.getElementById('ritmo-select').value] || '';
+            } else if (panelId === 'panel-padrao') {
+                document.getElementById('pad-nome').value = document.getElementById('padrao-select').value;
+                document.getElementById('pad-formula-edit').value = PADROES[document.getElementById('padrao-select').value] || '';
+            }
+        }
+    }
+
+    function atualizarFormulaInput() {
+        const sel = document.getElementById('padrao-select').value;
+        document.getElementById('padrao-formula').value = PADROES[sel] || '1,2,3';
+    }
+
+    function salvarEscala() {
+        const n = document.getElementById('esc-nome').value.trim();
+        const f = document.getElementById('esc-formula').value.trim();
+        if (n && f) { ESCALAS[n] = f; renderSelects(); toggleMenu('panel-escala'); atualizarNotasIniciais(); }
+    }
+
+    function excluirEscala() {
+        const k = document.getElementById('escala-select').value;
+        if (Object.keys(ESCALAS).length > 1) { delete ESCALAS[k]; renderSelects(); toggleMenu('panel-escala'); atualizarNotasIniciais(); }
+    }
+
+    function salvarRitmo() {
+        const n = document.getElementById('rit-nome').value.trim();
+        const f = document.getElementById('rit-formula').value.trim();
+        if (n && f) { RITMOS[n] = f; renderSelects(); toggleMenu('panel-ritmo'); }
+    }
+
+    function excluirRitmo() {
+        const k = document.getElementById('ritmo-select').value;
+        if (Object.keys(RITMOS).length > 1) { delete RITMOS[k]; renderSelects(); toggleMenu('panel-ritmo'); }
+    }
+
+    function salvarPadrao() {
+        const n = document.getElementById('pad-nome').value.trim();
+        const f = document.getElementById('pad-formula-edit').value.trim();
+        if (n && f) { PADROES[n] = f; renderSelects(); toggleMenu('panel-padrao'); }
+    }
+
+    function excluirPadrao() {
+        const k = document.getElementById('padrao-select').value;
+        if (Object.keys(PADROES).length > 1) { delete PADROES[k]; renderSelects(); toggleMenu('panel-padrao'); }
+    }
+
+    function pitchToMidi(noteStr) {
+        let match = noteStr.match(/^([A-G]#?)(-?\d+)$/);
+        if (!match) return 60;
+        let name = match[1];
+        let oct = parseInt(match[2]);
+        return (oct + 1) * 12 + NOTAS_BASE.indexOf(name);
+    }
+
+    function midiToPitch(midi) {
+        let name = NOTAS_BASE[midi % 12];
+        let oct = Math.floor(midi / 12) - 1;
+        return `${name}${oct}`;
+    }
+
+    function obterNotasEscalaAtual() {
+        const tonica = document.getElementById('tonica').value;
+        const oitava = parseInt(document.getElementById('oitava').value);
+        const formulaStr = ESCALAS[document.getElementById('escala-select').value] || '1,2,3,4,5,6,7';
+        let rootMidi = pitchToMidi(`${tonica}${oitava}`);
+        let notas = [];
+        formulaStr.split(',').forEach(item => {
+            let mod = 0, base = item.trim();
+            if (base.includes('#')) { mod = 1; base = base.replace('#', ''); }
+            else if (base.includes('b')) { mod = -1; base = base.replace('b', ''); }
+            let grauIdx = parseInt(base) - 1;
+            if (!isNaN(grauIdx) && grauIdx >= 0) {
+                let semitones = MAIOR_SEMITONS[grauIdx % 7] + (Math.floor(grauIdx / 7) * 12) + mod;
+                notas.push(midiToPitch(rootMidi + semitones));
+            }
+        });
+        return notas;
+    }
+
+    function atualizarNotasIniciais() {
+        const notas = obterNotasEscalaAtual();
+        const sel = document.getElementById('nota-inicial-select');
+        sel.innerHTML = '';
+        notas.forEach(n => {
+            let opt = document.createElement('option');
+            opt.value = n;
+            opt.innerText = n;
+            sel.appendChild(opt);
+        });
+    }
+
+    function construirSequenciaProgressao() {
+        const tonica = document.getElementById('tonica').value;
+        const oitava = parseInt(document.getElementById('oitava').value);
+        const formulaEsc = ESCALAS[document.getElementById('escala-select').value] || '1,2,3,4,5,6,7';
+        const formulaRit = RITMOS[document.getElementById('ritmo-select').value] || 'colcheia';
+        const formulaPad = document.getElementById('padrao-formula').value.trim();
+
+        let escalaNotas = [];
+        for (let octShift = -2; octShift <= 2; octShift++) {
+            let rootMidi = pitchToMidi(`${tonica}${oitava + octShift}`);
+            formulaEsc.split(',').forEach(item => {
+                let mod = 0, base = item.trim();
+                if (base.includes('#')) { mod = 1; base = base.replace('#', ''); }
+                else if (base.includes('b')) { mod = -1; base = base.replace('b', ''); }
+                let grauIdx = parseInt(base) - 1;
+                if (!isNaN(grauIdx) && grauIdx >= 0) {
+                    let semitones = MAIOR_SEMITONS[grauIdx % 7] + (Math.floor(grauIdx / 7) * 12) + mod;
+                    escalaNotas.push(midiToPitch(rootMidi + semitones));
+                }
+            });
+        }
+
+        let padraoProc = formulaPad.split(',').map(item => {
+            let mod = 0, base = item.trim();
+            if (base.includes('#')) { mod = 1; base = base.replace('#', ''); }
+            else if (base.includes('b')) { mod = -1; base = base.replace('b', ''); }
+            return { grau: parseInt(base) - 1, mod: mod };
+        });
+
+        let notaAlvo = document.getElementById('nota-inicial-select').value;
+        let targetMidi = pitchToMidi(notaAlvo);
+        let startIdx = 0, minDistance = 999;
+
+        escalaNotas.forEach((n, idx) => {
+            let dist = Math.abs(pitchToMidi(n) - targetMidi);
+            if (dist < minDistance) { minDistance = dist; startIdx = idx; }
+        });
+
+        let rItens = formulaRit.split(',').map(x => x.trim().toLowerCase());
+        function getDur(item) {
+            if (item.includes('tercina')) return 0.333;
+            if (item.includes('sextina')) return 0.166;
+            if (item.includes('semicolcheia')) return 0.25;
+            if (item.includes('seminima') || item.includes('semínima')) return 1.0;
+            if (item.includes('minima') || item.includes('mínima')) return 2.0;
+            return 0.5;
+        }
+
+        let isDesc = document.getElementById('direcao').value === 'desc';
+        let numCompassos = parseInt(document.getElementById('compassos').value);
+        let timeSig = document.getElementById('time-sig').value;
+        let beatsPerMeasure = parseInt(timeSig.split('/')[0]);
+        let totalBeats = numCompassos * beatsPerMeasure;
+
+        let resNotas = [], resDuracoes = [];
+        let currBeat = 0, noteIdx = 0;
+
+        while (currBeat < totalBeats) {
+            let step = Math.floor(noteIdx / padraoProc.length);
+            let pItem = padraoProc[noteIdx % padraoProc.length];
+            let baseIdx = isDesc ? startIdx - step : startIdx + step;
+            let finalIdx = isDesc ? baseIdx - pItem.grau : baseIdx + pItem.grau;
+
+            if (finalIdx >= 0 && finalIdx < escalaNotas.length) {
+                let noteMidi = pitchToMidi(escalaNotas[finalIdx]) + pItem.mod;
+                let dur = getDur(rItens[noteIdx % rItens.length]);
+                resNotas.push(midiToPitch(noteMidi));
+                resDuracoes.push(dur);
+                currBeat += dur;
+            } else { break; }
+            noteIdx++;
+        }
+
+        return { notas: resNotas, duracoes: resDuracoes };
+    }
+
+    function playWebAudio(notas, duracoes) {
+        if (!notas.length) return;
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+
+        const bpm = parseInt(document.getElementById('bpm').value);
+        const secPerBeat = 60.0 / bpm;
+        let startTime = ctx.currentTime + 0.05;
+        let totalTime = 0;
+
+        const toast = document.getElementById('toast-audio');
+        toast.classList.add('visible');
+
+        notas.forEach((nota, i) => {
+            let dur = duracoes[i] * secPerBeat;
+            totalTime += dur;
+            let osc = ctx.createOscillator();
+            let gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = FREQS[nota] || 440;
+            gain.gain.setValueAtTime(0.22, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(startTime);
+            osc.stop(startTime + dur);
+            startTime += dur;
+        });
+
+        setTimeout(() => { toast.classList.remove('visible'); }, (totalTime + 0.1) * 1000);
+    }
+
+    function ouvirEscala() {
+        const notas = obterNotasEscalaAtual();
+        const duracoes = new Array(notas.length).fill(1.0);
+        playWebAudio(notas, duracoes);
+    }
+
+    function ouvirProgressao() {
+        const seq = construirSequenciaProgressao();
+        playWebAudio(seq.notas, seq.duracoes);
+    }
+
+    function gerarEBaixarMIDI() {
+        const seq = construirSequenciaProgressao();
+        if (!seq.notas.length) return;
+        const track = new MidiWriter.Track();
+        track.setTempo(parseInt(document.getElementById('bpm').value));
+
+        seq.notas.forEach((nota, i) => {
+            let d = seq.duracoes[i];
+            let durationCode = '8';
+            if (d >= 2.0) durationCode = '2';
+            else if (d >= 1.0) durationCode = '4';
+            else if (d <= 0.25) durationCode = '16';
+            track.addEvent(new MidiWriter.NoteEvent({ pitch: [nota], duration: durationCode }));
+        });
+
+        const write = new MidiWriter.Writer(track);
+        const link = document.createElement('a');
+        link.href = write.dataUri();
+        link.download = `melodia_${document.getElementById('tonica').value}_${document.getElementById('direcao').value}.mid`;
+        link.click();
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
