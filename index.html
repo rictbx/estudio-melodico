@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estúdio Melódico & Gerador MIDI (v1.0.2)</title>
+    <title>Estúdio Melódico & Gerador MIDI (v1.0.3)</title>
     <script src="https://cdn.jsdelivr.net/npm/midi-writer-js@2.1.4/build/index.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -41,8 +41,10 @@
         .btn { background: #2a324b; color: #fff; border: 1px solid var(--panel-border); border-radius: 10px; padding: 11px 16px; font-size: 0.88rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; transition: all 0.2s; }
         .btn:hover { background: #374151; transform: translateY(-1px); }
         .btn-icon { padding: 11px; width: 44px; justify-content: center; background: rgba(255, 255, 255, 0.05); }
-        .btn-listen { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); }
-        .btn-listen:hover { background: rgba(99, 102, 241, 0.3); color: #fff; }
+        .btn-listen { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); }
+        .btn-listen:hover { background: rgba(99, 102, 241, 0.4); color: #fff; }
+        .btn-stop { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+        .btn-stop:hover { background: var(--accent-danger); color: #fff; }
         .btn-primary { background: var(--accent-success); color: #fff; width: 100%; padding: 14px; font-size: 1rem; margin-top: 10px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3); }
         .btn-primary:hover { background: var(--accent-success-hover); }
         .btn-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
@@ -63,7 +65,7 @@
     <div class="app-header">
         <h1>Estúdio Melódico & Gerador MIDI</h1>
         <p>Crie, personalize e pré-visualize permutações e frases musicais</p>
-        <div class="version-badge">Versão v1.0.2</div>
+        <div class="version-badge">Versão v1.0.3</div>
     </div>
     <div class="form-group grid-2">
         <div>
@@ -85,7 +87,8 @@
         <div class="input-row">
             <select id="escala-select"></select>
             <button class="btn btn-icon" title="Opções da Escala" onclick="toggleMenu('panel-escala')">⋮</button>
-            <button id="btn-ouvir-escala-js" class="btn btn-listen" onclick="ouvirEscala()">▶ Ouvir Escala</button>
+            <button class="btn btn-listen" onclick="ouvirEscala()">▶ Ouvir</button>
+            <button class="btn btn-stop" onclick="pararAudio()">⏹ Parar</button>
         </div>
         <div id="panel-escala" class="collapsible-panel">
             <div class="form-group"><input type="text" id="esc-nome" placeholder="Nome da Escala"></div>
@@ -127,7 +130,8 @@
         <div class="input-row">
             <select id="padrao-select" onchange="atualizarFormulaInput()"></select>
             <button class="btn btn-icon" title="Opções de Padrão" onclick="toggleMenu('panel-padrao')">⋮</button>
-            <button id="btn-ouvir-prog-js" class="btn btn-listen" onclick="ouvirProgressao()">▶ Ouvir Progressão</button>
+            <button class="btn btn-listen" onclick="ouvirProgressao()">▶ Ouvir</button>
+            <button class="btn btn-stop" onclick="pararAudio()">⏹ Parar</button>
         </div>
         <div id="panel-padrao" class="collapsible-panel">
             <div class="form-group"><input type="text" id="pad-nome" placeholder="Nome do Padrão"></div>
@@ -166,7 +170,7 @@
     </div>
     <button class="btn btn-primary" onclick="gerarEBaixarMIDI()">Gerar e Baixar MIDI</button>
 </div>
-<div id="toast-audio" class="toast-audio"><div class="pulse-dot"></div><span>Reproduzindo áudio...</span></div>
+<div id="toast-audio" class="toast-audio"><div class="pulse-dot"></div><span>Reproduzindo áudio... [Espaço para Pausar/Retomar]</span></div>
 
 <script>
     let ESCALAS = {"Menor Harm\u00f4nica": "1,2,3b,4,5,6b,7", "Menor Natural (E\u00f3lica)": "1,2,3b,4,5,6b,7b", "Menor Mel\u00f3dica": "1,2,3b,4,5,6,7", "Maior (J\u00f4nica)": "1,2,3,4,5,6,7", "D\u00f3rica": "1,2,3b,4,5,6,7b", "Fr\u00edgia": "1,2b,3b,4,5,6b,7b", "L\u00eddia": "1,2,3,4#,5,6,7", "Mixol\u00eddia": "1,2,3,4,5,7b", "Blues": "1,3b,4,4#,5,7b", "Dominante Bebop": "1,2,3,4,5,6,7b,7", "H\u00fangara Menor": "1,2,3b,4#,5,6b,7"};
@@ -187,12 +191,29 @@
     const MAIOR_SEMITONS = [0, 2, 4, 5, 7, 9, 11];
     const NOTAS_BASE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
+    let activeOscillators = [];
+    let audioCtx = null;
+    let isPlaying = false;
+    let isPaused = false;
+    let currentNotas = [];
+    let currentDuracoes = [];
+    let currentBpm = 120;
+    let pausedTime = 0;
+    let playbackStartTime = 0;
+
     function init() {
         renderSelects();
         atualizarNotasIniciais();
         document.getElementById('tonica').addEventListener('change', atualizarNotasIniciais);
         document.getElementById('escala-select').addEventListener('change', atualizarNotasIniciais);
         document.getElementById('oitava').addEventListener('change', atualizarNotasIniciais);
+
+        window.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
+                e.preventDefault();
+                togglePlayPause();
+            }
+        });
     }
 
     function renderSelects() {
@@ -402,126 +423,103 @@
         return { notas: resNotas, duracoes: resDuracoes };
     }
 
-    function playWebAudio(notas, duracoes, bpm, tipoBtn) {
-        if (!notas.length) return;
-        if (window.currentAudioSession) { window.currentAudioSession.stop(); }
+    function pararAudio() {
+        activeOscillators.forEach(o => { try { o.stop(); } catch(e) {} });
+        activeOscillators = [];
+        if (audioCtx && audioCtx.state !== 'closed') {
+            audioCtx.close();
+        }
+        isPlaying = false;
+        isPaused = false;
+        pausedTime = 0;
+        document.getElementById('toast-audio').classList.remove('visible');
+    }
 
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        const ctx = new AudioCtx();
-        if (ctx.state === 'suspended') ctx.resume();
+    function togglePlayPause() {
+        if (!isPlaying && !isPaused) {
+            ouvirProgressao();
+        } else if (isPlaying) {
+            // Pausar
+            pausedTime = audioCtx.currentTime - playbackStartTime;
+            activeOscillators.forEach(o => { try { o.stop(); } catch(e) {} });
+            activeOscillators = [];
+            if (audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+            isPlaying = false;
+            isPaused = true;
+            document.getElementById('toast-audio').querySelector('span').innerText = "⏸ Pausado [Espaço para Retomar]";
+        } else if (isPaused) {
+            // Retomar
+            playEngine(currentNotas, currentDuracoes, currentBpm, pausedTime);
+            isPaused = false;
+            isPlaying = true;
+            document.getElementById('toast-audio').querySelector('span').innerText = "🎵 Reproduzindo [Espaço para Pausar]";
+        }
+    }
 
-        const targetBtnId = tipoBtn === 'escala' ? 'btn-ouvir-escala-js' : 'btn-ouvir-prog-js';
-        const segundosPorTempo = 60.0 / bpm;
+    function playEngine(notas, duracoes, bpm, offset) {
+        pararAudio();
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
 
-        let activeOscillators = [];
-        let isPlaying = true;
-        let pausedTime = 0;
-        let startTime = ctx.currentTime + 0.05;
+        currentNotas = notas;
+        currentDuracoes = duracoes;
+        currentBpm = bpm;
+        isPlaying = true;
+        isPaused = false;
 
-        const mainBtn = document.getElementById(targetBtnId);
+        const secPerBeat = 60.0 / bpm;
+        playbackStartTime = audioCtx.currentTime - offset;
+        let currTime = 0;
+        let totalDuration = 0;
 
-        function setBtnState(state) {
-            if (!mainBtn) return;
-            if (state === 'playing') {
-                mainBtn.innerText = '⏸ Pausar';
-                mainBtn.style.background = '#d97706';
-            } else if (state === 'paused') {
-                mainBtn.innerText = '▶ Retomar';
-                mainBtn.style.background = '#2563eb';
-            } else {
-                mainBtn.innerText = tipoBtn === 'escala' ? '▶ Ouvir Escala' : '▶ Ouvir Progressão';
-                mainBtn.style.background = '';
+        duracoes.forEach(d => totalDuration += (d * secPerBeat));
+
+        notas.forEach((nota, i) => {
+            let dur = duracoes[i] * secPerBeat;
+            let nStart = currTime;
+            let nEnd = currTime + dur;
+
+            if (nEnd > offset) {
+                let actualDur = dur - Math.max(0, offset - nStart);
+                let scheduleTime = playbackStartTime + nStart;
+
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.value = pianoFreqs[nota] || 440;
+                
+                gain.gain.setValueAtTime(0.22, Math.max(audioCtx.currentTime, scheduleTime));
+                gain.gain.exponentialRampToValueAtTime(0.0001, Math.max(audioCtx.currentTime, scheduleTime) + actualDur);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start(Math.max(audioCtx.currentTime, scheduleTime));
+                osc.stop(Math.max(audioCtx.currentTime, scheduleTime) + actualDur);
+                activeOscillators.push(osc);
             }
-        }
-
-        function runPlayback(offset) {
-            startTime = ctx.currentTime - offset + 0.05;
-            let currTime = 0;
-            notas.forEach((nota, i) => {
-                let dur = duracoes[i] * segundosPorTempo;
-                let nStart = currTime;
-                let nEnd = currTime + dur;
-
-                if (nEnd > offset) {
-                    let actualDur = dur - Math.max(0, offset - nStart);
-
-                    let osc = ctx.createOscillator();
-                    let gain = ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.value = pianoFreqs[nota] || 440;
-                    gain.gain.setValueAtTime(0.22, startTime + nStart);
-                    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + nStart + actualDur);
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start(startTime + nStart);
-                    osc.stop(startTime + nStart + actualDur);
-                    activeOscillators.push(osc);
-                }
-                currTime += dur;
-            });
-            setBtnState('playing');
-        }
-
-        runPlayback(0);
-
-        window.currentAudioSession = {
-            stop: function() {
-                activeOscillators.forEach(o => { try { o.stop(); } catch(e) {} });
-                activeOscillators = [];
-                if (ctx.state !== 'closed') ctx.close();
-                setBtnState('stopped');
-                const toast = document.getElementById('toast-audio');
-                if (toast) toast.classList.remove('visible');
-            },
-            pause: function() {
-                if (isPlaying) {
-                    pausedTime = ctx.currentTime - (startTime - 0.05);
-                    activeOscillators.forEach(o => { try { o.stop(); } catch(e) {} });
-                    activeOscillators = [];
-                    isPlaying = false;
-                    setBtnState('paused');
-                } else {
-                    runPlayback(pausedTime);
-                    isPlaying = true;
-                    setBtnState('playing');
-                }
-            }
-        };
-
-        if (!window.spacebarListenerAdded) {
-            window.spacebarListenerAdded = true;
-            window.addEventListener('keydown', function(e) {
-                if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
-                    e.preventDefault();
-                    if (window.currentAudioSession) {
-                        window.currentAudioSession.pause();
-                    }
-                }
-            });
-        }
-
-        let totalTime = 0;
-        duracoes.forEach(d => totalTime += (d * segundosPorTempo));
+            currTime += dur;
+        });
 
         const toast = document.getElementById('toast-audio');
-        toast.innerHTML = `<div class="pulse-dot"></div><span>Reproduzindo [Espaço para Pausar]</span> <button onclick="window.currentAudioSession.pause()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; padding:3px 8px; border-radius:4px; cursor:pointer; margin-left:8px;">⏸ Pausa/Retoma</button> <button onclick="window.currentAudioSession.stop()" style="background:rgba(239,68,68,0.8); border:none; color:#fff; padding:3px 8px; border-radius:4px; cursor:pointer;">⏹ Parar</button>`;
+        toast.querySelector('span').innerText = "🎵 Reproduzindo [Espaço para Pausar]";
         toast.classList.add('visible');
 
         setTimeout(() => {
-            setBtnState('stopped');
-            toast.classList.remove('visible');
-        }, (totalTime + 0.2) * 1000);
+            if (isPlaying) pararAudio();
+        }, (totalDuration - offset + 0.2) * 1000);
     }
 
     function ouvirEscala() {
         const notas = obterNotasEscalaAtual();
         const duracoes = new Array(notas.length).fill(1.0);
-        tocar_notas_web_audio(notas, duracoes, bpm_input.value, 'escala');
+        playEngine(notas, duracoes, parseInt(document.getElementById('bpm').value), 0);
     }
 
     function ouvirProgressao() {
         const seq = construirSequenciaProgressao();
-        playWebAudio(seq.notas, seq.duracoes, bpm_input.value, 'progressao');
+        playEngine(seq.notas, seq.duracoes, parseInt(document.getElementById('bpm').value), 0);
     }
 
     function gerarEBaixarMIDI() {
