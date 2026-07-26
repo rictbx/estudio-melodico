@@ -147,6 +147,49 @@
         <input type="text" id="padrao-formula" value="1,2,3">
     </div>
 
+    <!-- ACORDE & ACOMPANHAMENTO -->
+    <div class="form-group">
+        <label>Acompanhamento Harmônico & Acorde (Tensões)</label>
+        <div class="input-row">
+            <select id="acorde-select"></select>
+            <button class="btn btn-icon" title="Opções de Acorde" onclick="toggleMenu('panel-acorde')">⋮</button>
+        </div>
+        <div id="panel-acorde" class="collapsible-panel" style="border: 1px solid #f59e0b;">
+            <div style="font-size:0.82rem; font-weight:600; color:#f59e0b; margin-bottom:8px;">Opções do Acorde:</div>
+            <div class="form-group"><input type="text" id="acorde-nome" placeholder="Nome do Acorde"></div>
+            <div class="form-group"><input type="text" id="acorde-formula-edit" placeholder="Ex: 1,3,5,7,9,#11"></div>
+            <div class="input-row">
+                <button class="btn" style="flex:1; background:#d97706; color:#fff;" onclick="salvarAcordeWeb()">+ Salvar Acorde</button>
+                <button class="btn btn-danger" onclick="excluirAcordeWeb()">Excluir</button>
+            </div>
+        </div>
+    </div>
+    <div class="grid-3 form-group">
+        <div>
+            <label>Tônica Acorde</label>
+            <select id="acorde-tonica">
+                <option value="A">A</option><option value="A#">A#</option><option value="B">B</option>
+                <option value="C">C</option><option value="C#">C#</option><option value="D">D</option>
+                <option value="D#">D#</option><option value="E">E</option><option value="F">F</option>
+                <option value="F#">F#</option><option value="G">G</option><option value="G#">G#</option>
+            </select>
+        </div>
+        <div>
+            <label>Oitava Acorde</label>
+            <input type="number" id="acorde-oitava" value="3" min="1" max="6">
+        </div>
+        <div>
+            <label>Ritmo do Acorde</label>
+            <select id="acorde-ritmo-select"></select>
+        </div>
+    </div>
+    <div class="form-group" style="display:flex; align-items:center; justify-content:space-between; background:#111827; padding:10px; border-radius:8px;">
+        <label style="margin:0; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="acorde-ativo" checked> Tocar Acorde Junto com a Progressão
+        </label>
+        <button class="btn" style="background:#d97706; color:#fff; font-size:0.8rem; padding:6px 12px;" onclick="tocarAcordeWeb()">Ouvir Acorde</button>
+    </div>
+
     <div class="section-title">Controles de Áudio Web</div>
     <div class="grid-2 form-group">
         <button class="btn" id="btn-ouvir-escala-web" style="background:#0ea5e9; color:#fff;" onclick="tocarEscalaWeb()">▶ Ouvir Escala</button>
@@ -216,18 +259,38 @@
   "Aproximação Inferior (7b-1-2-3)": "7b,1,2,3",
   "Arpejo Ascendente (1-3-5-7)": "1,3,5,7"
 };
+    let ACORDES = {
+  "Tríade Maior (1,3,5)": "1,3,5",
+  "Tríade Menor (1,3b,5)": "1,3b,5",
+  "Sétima Dominante - 7 (1,3,5,7b)": "1,3,5,7b",
+  "Sétima Maior - maj7 (1,3,5,7)": "1,3,5,7",
+  "Menor com Sétima - m7 (1,3b,5,7b)": "1,3b,5,7b",
+  "Meio-Diminuto - m7b5 (1,3b,5b,7b)": "1,3b,5b,7b",
+  "Diminuto - dim7 (1,3b,5b,6)": "1,3b,5b,6",
+  "Sétima com Nona - 7(9) (1,3,5,7b,9)": "1,3,5,7b,9",
+  "Sétima Maior com Nona - maj7(9) (1,3,5,7,9)": "1,3,5,7,9",
+  "Menor 7 com Nona e 11 - m7(9,11)": "1,3b,5,7b,9,11",
+  "Dominante Alterado - 7alt (1,3,5b,7b,9b,13b)": "1,3,5b,7b,9b,13b",
+  "Sétima Maior com 9 e 11# - maj7(9,#11)": "1,3,5,7,9,11#",
+  "Sus4 com 7 e 9 - 7sus4(9)": "1,4,5,7b,9"
+};
     let CONFIG = {
   "tonica": "A",
   "oitavaBase": 4,
   "escalaNome": "Menor Harmônica",
-  "ritmoNome": "Colcheia + 2 Semicolcheias",
+  "ritmoNome": "Tercinas de Colcheia",
   "padraoNome": "Linear Simples (1,2,3)",
   "padraoFormula": "1,2,3",
   "notaInicial": "A4",
   "direcao": "asc",
-  "numCompassos": 4,
+  "numCompassos": 8,
   "bpm": 120,
-  "timeSignature": "4/4"
+  "timeSignature": "4/4",
+  "acordeNome": "Sétima Maior com Nona - maj7(9) (1,3,5,7,9)",
+  "acordeTonica": "A",
+  "acordeOitava": 3,
+  "acordeRitmoNome": "Mínima (2t)",
+  "acordeAtivo": true
 };
 
     const notaValores = { 'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'F':5, 'F#':6, 'Gb':6, 'G':7, 'G#':8, 'Ab':8, 'A':9, 'A#':10, 'Bb':10, 'B':11 };
@@ -272,6 +335,27 @@
             if (el) el.value = CONFIG.padraoFormula;
         }
 
+        if (CONFIG.acordeNome && ACORDES[CONFIG.acordeNome]) {
+            let el = document.getElementById('acorde-select');
+            if (el) el.value = CONFIG.acordeNome;
+        }
+        if (CONFIG.acordeTonica) {
+            let el = document.getElementById('acorde-tonica');
+            if (el) el.value = CONFIG.acordeTonica;
+        }
+        if (CONFIG.acordeOitava) {
+            let el = document.getElementById('acorde-oitava');
+            if (el) el.value = CONFIG.acordeOitava;
+        }
+        if (CONFIG.acordeRitmoNome && RITMOS[CONFIG.acordeRitmoNome]) {
+            let el = document.getElementById('acorde-ritmo-select');
+            if (el) el.value = CONFIG.acordeRitmoNome;
+        }
+        if (CONFIG.acordeAtivo !== undefined) {
+            let el = document.getElementById('acorde-ativo');
+            if (el) el.checked = !!CONFIG.acordeAtivo;
+        }
+
         atualizarNotasWeb();
 
         if (CONFIG.notaInicial) {
@@ -309,6 +393,8 @@
         populateSelect('escala-select', ESCALAS);
         populateSelect('ritmo-select', RITMOS);
         populateSelect('padrao-select', PADROES);
+        populateSelect('acorde-select', ACORDES);
+        populateSelect('acorde-ritmo-select', RITMOS);
         aoMudarPadrao();
     }
     function populateSelect(id, dict) {
@@ -340,6 +426,9 @@
             } else if (panelId === 'panel-padrao') {
                 document.getElementById('pad-nome').value = document.getElementById('padrao-select').value;
                 document.getElementById('pad-formula-edit').value = PADROES[document.getElementById('padrao-select').value] || '';
+            } else if (panelId === 'panel-acorde') {
+                document.getElementById('acorde-nome').value = document.getElementById('acorde-select').value;
+                document.getElementById('acorde-formula-edit').value = ACORDES[document.getElementById('acorde-select').value] || '';
             }
         }
     }
@@ -421,6 +510,61 @@
         const sel = document.getElementById('padrao-select').value;
         const el = document.getElementById('padrao-formula');
         if (el) el.value = PADROES[sel] || '1,2,3';
+    }
+
+    function salvarAcordeWeb() {
+        let n = document.getElementById('acorde-nome').value.trim();
+        let f = document.getElementById('acorde-formula-edit').value.trim();
+        if (n && f) {
+            ACORDES[n] = f;
+            populateSelect('acorde-select', ACORDES);
+            document.getElementById('acorde-select').value = n;
+            fecharPaineisWeb();
+        }
+    }
+    function excluirAcordeWeb() {
+        let sel = document.getElementById('acorde-select').value;
+        if (Object.keys(ACORDES).length > 1) {
+            delete ACORDES[sel];
+            populateSelect('acorde-select', ACORDES);
+            fecharPaineisWeb();
+        }
+    }
+
+    function parseAcordeIntervalosWeb(formulaStr) {
+        if (!formulaStr) return [0, 4, 7];
+        const baseMaj = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17, 19, 21, 23];
+        const partes = formulaStr.split(',').map(x => x.trim());
+        let interv = [];
+        partes.forEach(p => {
+            let mod = 0;
+            let numStr = p;
+            if (p.includes('#')) { mod = 1; numStr = p.replace('#', ''); }
+            else if (p.includes('b')) { mod = -1; numStr = p.replace('b', ''); }
+            let grau = parseInt(numStr, 10);
+            if (!isNaN(grau) && grau >= 1) {
+                let idx = grau - 1;
+                let semitones = idx < baseMaj.length ? baseMaj[idx] : baseMaj[(idx % 7)] + Math.floor(idx / 7) * 12;
+                interv.push(semitones + mod);
+            }
+        });
+        return interv.length > 0 ? interv : [0, 4, 7];
+    }
+
+    function obterNotasAcordeWeb() {
+        const tonica = document.getElementById('acorde-tonica').value || 'A';
+        const oitava = parseInt(document.getElementById('acorde-oitava').value, 10) || 3;
+        const acordeNome = document.getElementById('acorde-select').value;
+        const formulaStr = ACORDES[acordeNome] || '1,3,5';
+        const interv = parseAcordeIntervalosWeb(formulaStr);
+        let baseVal = (notaValores[tonica] !== undefined ? notaValores[tonica] : 0) + (oitava + 1) * 12;
+        const nomesNotas = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        return interv.map(iv => {
+            let total = baseVal + iv;
+            let oct = Math.floor(total / 12) - 1;
+            let nIdx = (total % 12 + 12) % 12;
+            return nomesNotas[nIdx] + oct;
+        });
     }
 
     function parseEscalaIntervalos(formulaStr) {
@@ -674,6 +818,32 @@
         }, (totalDurSec + 0.1) * 1000);
     }
 
+    function tocarAcordeWeb() {
+        const notas = obterNotasAcordeWeb();
+        pararAudioWeb();
+        globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
+
+        const now = globalAudioCtx.currentTime;
+        notas.forEach(nota => {
+            let osc = globalAudioCtx.createOscillator();
+            let gain = globalAudioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = getNoteFreqWeb(nota);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.0);
+            osc.connect(gain);
+            gain.connect(globalAudioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 2.0);
+            globalActiveOscs.push(osc);
+        });
+
+        setTimeout(() => {
+            pararAudioWeb();
+        }, 2100);
+    }
+
     function tocarEscalaWeb() {
         const notas = obterNotasEscalaWeb();
         const duracoes = notas.map(() => 1.0);
@@ -684,7 +854,47 @@
     function tocarProgressaoWeb() {
         const res = gerarSequenciaNotasWeb();
         const bpm = parseInt(document.getElementById('bpm').value) || 120;
+
+        const acordeAtivo = document.getElementById('acorde-ativo') ? document.getElementById('acorde-ativo').checked : false;
+
         tocarSequenciaWeb(res.notas, res.duracoes, bpm, 'progressao', 'btn-ouvir-prog-web');
+
+        if (acordeAtivo && globalAudioCtx && res.duracoes.length > 0) {
+            const secPerBeat = 60.0 / bpm;
+            let totalBeats = res.duracoes.reduce((a, b) => a + b, 0);
+
+            const chordNotes = obterNotasAcordeWeb();
+            const ritmoAcordeSel = document.getElementById('acorde-ritmo-select') ? document.getElementById('acorde-ritmo-select').value : 'Mínima (2t)';
+            const ritmoFormula = RITMOS[ritmoAcordeSel] || 'mínima';
+            const partesRitmo = ritmoFormula.split(',').map(x => x.trim()).filter(Boolean);
+
+            let tempoAcumulado = 0;
+            let rIdx = 0;
+
+            while (tempoAcumulado < totalBeats) {
+                let termo = partesRitmo[rIdx % partesRitmo.length] || 'mínima';
+                let durBeat = getDuracaoValorWeb(termo);
+                let scheduleTime = globalAudioCtx.currentTime + (tempoAcumulado * secPerBeat);
+                let noteDurSec = durBeat * secPerBeat;
+
+                chordNotes.forEach(nota => {
+                    let osc = globalAudioCtx.createOscillator();
+                    let gain = globalAudioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = getNoteFreqWeb(nota);
+                    gain.gain.setValueAtTime(0.08, scheduleTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, scheduleTime + (noteDurSec * 0.95));
+                    osc.connect(gain);
+                    gain.connect(globalAudioCtx.destination);
+                    osc.start(scheduleTime);
+                    osc.stop(scheduleTime + noteDurSec);
+                    globalActiveOscs.push(osc);
+                });
+
+                tempoAcumulado += durBeat;
+                rIdx++;
+            }
+        }
     }
 
     function parseMidiNumberWeb(pitch) {
