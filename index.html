@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estúdio Melódico & Gerador MIDI (v1.0.23)</title>
+    <script src="https://cdn.jsdelivr.net/npm/midi-writer-js@2.1.4/browser/midi-writer-js.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/midi-writer-js@2.1.4/build/index.min.js"></script>
+    <script src="https://unpkg.com/midi-writer-js@2.1.4/browser/midi-writer-js.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -616,12 +618,18 @@
 
     function gerarEBaixarMIDI() {
         try {
+            let Mw = window.MidiWriter || window.MidiWriterJS || (typeof MidiWriter !== 'undefined' ? MidiWriter : null);
+            if (!Mw) {
+                alert("Erro ao carregar a biblioteca MidiWriter. Por favor, verifique sua conexão com a internet ou recarregue a página.");
+                return;
+            }
+
             const res = gerarSequenciaNotasWeb();
             const bpm = parseInt(document.getElementById('bpm').value) || 120;
             const timeSig = document.getElementById('time-sig').value;
             const temposComp = parseInt(timeSig.split('/')[0]) || 4;
 
-            let track = new MidiWriter.Track();
+            let track = new Mw.Track();
             track.setTimeSignature(temposComp, 4);
             track.setTempo(bpm);
 
@@ -640,14 +648,14 @@
                 else if (rItem.includes('colcheia')) duracaoMw = rItem.includes('pont') ? '8d' : '8';
                 else if (rItem.includes('tercina')) duracaoMw = '8t';
 
-                let noteObj = new MidiWriter.NoteEvent({
+                let noteObj = new Mw.NoteEvent({
                     pitch: [nName],
                     duration: duracaoMw
                 });
                 track.addEvent(noteObj);
             });
 
-            let writer = new MidiWriter.Writer([track]);
+            let writer = new Mw.Writer([track]);
             let uri = writer.dataUri();
             let a = document.createElement('a');
             a.href = uri;
