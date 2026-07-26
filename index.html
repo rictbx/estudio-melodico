@@ -83,7 +83,7 @@
         <div class="input-row">
             <select id="escala-select"></select>
             <button class="btn btn-icon" title="Opções da Escala" onclick="toggleMenu('panel-escala')">⋮</button>
-            <button class="btn btn-listen" onclick="ouvirEscala()">▶ Ouvir Escala</button>
+            <button id="btn-ouvir-escala-js" class="btn btn-listen" onclick="ouvirEscala()">▶ Ouvir Escala</button>
         </div>
         <div id="panel-escala" class="collapsible-panel">
             <div class="form-group"><input type="text" id="esc-nome" placeholder="Nome da Escala"></div>
@@ -125,7 +125,7 @@
         <div class="input-row">
             <select id="padrao-select" onchange="atualizarFormulaInput()"></select>
             <button class="btn btn-icon" title="Opções de Padrão" onclick="toggleMenu('panel-padrao')">⋮</button>
-            <button class="btn btn-listen" onclick="ouvirProgressao()">▶ Ouvir Progressão</button>
+            <button id="btn-ouvir-prog-js" class="btn btn-listen" onclick="ouvirProgressao()">▶ Ouvir Progressão</button>
         </div>
         <div id="panel-padrao" class="collapsible-panel">
             <div class="form-group"><input type="text" id="pad-nome" placeholder="Nome do Padrão"></div>
@@ -400,7 +400,7 @@
         return { notas: resNotas, duracoes: resDuracoes };
     }
 
-    function playWebAudio(notas, duracoes) {
+    function playWebAudio(notas, duracoes, bpm, tipoBtn) {
         if (!notas.length) return;
         if (window.currentAudioSession) { window.currentAudioSession.stop(); }
 
@@ -408,23 +408,39 @@
         const ctx = new AudioCtx();
         if (ctx.state === 'suspended') ctx.resume();
 
-        const bpm = parseInt(document.getElementById('bpm').value);
-        const secPerBeat = 60.0 / bpm;
+        const targetBtnId = tipoBtn === 'escala' ? 'btn-ouvir-escala-js' : 'btn-ouvir-prog-js';
+        const segundosPorTempo = 60.0 / bpm;
+
         let activeOscillators = [];
         let isPlaying = true;
         let pausedTime = 0;
         let startTime = ctx.currentTime + 0.05;
 
+        const mainBtn = document.getElementById(targetBtnId);
+
+        function setBtnState(state) {
+            if (!mainBtn) return;
+            if (state === 'playing') {
+                mainBtn.innerText = '⏸ Pausar';
+                mainBtn.style.background = '#d97706';
+            } else if (state === 'paused') {
+                mainBtn.innerText = '▶ Retomar';
+                mainBtn.style.background = '#2563eb';
+            } else {
+                mainBtn.innerText = tipoBtn === 'escala' ? '▶ Ouvir Escala' : '▶ Ouvir Progressão';
+                mainBtn.style.background = '';
+            }
+        }
+
         function runPlayback(offset) {
             startTime = ctx.currentTime - offset + 0.05;
             let currTime = 0;
             notas.forEach((nota, i) => {
-                let dur = duracoes[i] * secPerBeat;
+                let dur = duracoes[i] * segundosPorTempo;
                 let nStart = currTime;
                 let nEnd = currTime + dur;
 
                 if (nEnd > offset) {
-                    let delay = Math.max(0, nStart - offset);
                     let actualDur = dur - Math.max(0, offset - nStart);
 
                     let osc = ctx.createOscillator();
@@ -441,6 +457,7 @@
                 }
                 currTime += dur;
             });
+            setBtnState('playing');
         }
 
         runPlayback(0);
@@ -450,6 +467,7 @@
                 activeOscillators.forEach(o => { try { o.stop(); } catch(e) {} });
                 activeOscillators = [];
                 if (ctx.state !== 'closed') ctx.close();
+                setBtnState('stopped');
                 const toast = document.getElementById('toast-audio');
                 if (toast) toast.classList.remove('visible');
             },
@@ -459,34 +477,50 @@
                     activeOscillators.forEach(o => { try { o.stop(); } catch(e) {} });
                     activeOscillators = [];
                     isPlaying = false;
-                    document.getElementById('toast-btn').innerText = '▶ Retomar';
+                    setBtnState('paused');
                 } else {
                     runPlayback(pausedTime);
                     isPlaying = true;
-                    document.getElementById('toast-btn').innerText = '⏸ Pausar';
+                    setBtnState('playing');
                 }
             }
         };
 
+        // Suporte global para a Barra de Espaço
+        if (!window.spacebarListenerAdded) {
+            window.spacebarListenerAdded = true;
+            window.addEventListener('keydown', function(e) {
+                if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
+                    e.preventDefault();
+                    if (window.currentAudioSession) {
+                        window.currentAudioSession.pause();
+                    }
+                }
+            });
+        }
+
         let totalTime = 0;
-        duracoes.forEach(d => totalTime += (d * secPerBeat));
+        duracoes.forEach(d => totalTime += (d * segundosPorTempo));
 
         const toast = document.getElementById('toast-audio');
-        toast.innerHTML = `<div class="pulse-dot"></div><span>Reproduzindo áudio...</span> <button id="toast-btn" onclick="window.currentAudioSession.pause()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; padding:3px 8px; border-radius:4px; cursor:pointer; margin-left:8px;">⏸ Pausar</button> <button onclick="window.currentAudioSession.stop()" style="background:rgba(239,68,68,0.8); border:none; color:#fff; padding:3px 8px; border-radius:4px; cursor:pointer;">⏹ Parar</button>`;
+        toast.innerHTML = `<div class="pulse-dot"></div><span>Reproduzindo [Espaço para Pausar]</span> <button onclick="window.currentAudioSession.pause()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; padding:3px 8px; border-radius:4px; cursor:pointer; margin-left:8px;">⏸ Pausa/Retoma</button> <button onclick="window.currentAudioSession.stop()" style="background:rgba(239,68,68,0.8); border:none; color:#fff; padding:3px 8px; border-radius:4px; cursor:pointer;">⏹ Parar</button>`;
         toast.classList.add('visible');
 
-        setTimeout(() => { toast.classList.remove('visible'); }, (totalTime + 0.2) * 1000);
+        setTimeout(() => {
+            setBtnState('stopped');
+            toast.classList.remove('visible');
+        }, (totalTime + 0.2) * 1000);
     }
 
     function ouvirEscala() {
         const notas = obterNotasEscalaAtual();
         const duracoes = new Array(notas.length).fill(1.0);
-        playWebAudio(notas, duracoes);
+        tocar_notas_web_audio(notas, duracoes, bpm_input.value, 'escala');
     }
 
     function ouvirProgressao() {
         const seq = construirSequenciaProgressao();
-        playWebAudio(seq.notas, seq.duracoes);
+        playWebAudio(seq.notas, seq.duracoes, bpm_input.value, 'progressao');
     }
 
     function gerarEBaixarMIDI() {
