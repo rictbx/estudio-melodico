@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estúdio Melódico & Gerador MIDI (v1.0.24)</title>
+    <title>Estúdio Melódico & Gerador MIDI (v2.5)</title>
     <script src="https://cdn.jsdelivr.net/npm/midi-writer-js@2.1.4/browser/midi-writer-js.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/midi-writer-js@2.1.4/build/index.min.js"></script>
     <script src="https://unpkg.com/midi-writer-js@2.1.4/browser/midi-writer-js.js"></script>
@@ -59,7 +59,7 @@
     <div class="app-header">
         <h1>Estúdio Melódico & Gerador MIDI</h1>
         <p>Crie, personalize e pré-visualize permutações e frases musicais</p>
-        <div class="version-badge">Versão v1.0.24</div>
+        <div class="version-badge">Versão v2.5</div>
     </div>
     <div class="form-group grid-2">
         <div>
@@ -1053,7 +1053,7 @@
                 let uri = writer.dataUri();
                 let a = document.createElement('a');
                 a.href = uri;
-                a.download = "estudio_melodico_v1.0.24.mid";
+                a.download = "estudio_melodico_v2.5.mid";
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -1064,7 +1064,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = "estudio_melodico_v1.0.24.mid";
+                a.download = "estudio_melodico_v2.5.mid";
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
