@@ -216,6 +216,19 @@
   "Aproximação Inferior (7b-1-2-3)": "7b,1,2,3",
   "Arpejo Ascendente (1-3-5-7)": "1,3,5,7"
 };
+    let CONFIG = {
+  "tonica": "A",
+  "oitavaBase": 4,
+  "escalaNome": "Menor Harmônica",
+  "ritmoNome": "Tercinas de Colcheia",
+  "padraoNome": "Linear Simples (1,2,3)",
+  "padraoFormula": "1,2,3",
+  "notaInicial": "A4",
+  "direcao": "asc",
+  "numCompassos": 8,
+  "bpm": 120,
+  "timeSignature": "4/4"
+};
 
     const notaValores = { 'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'F':5, 'F#':6, 'Gb':6, 'G':7, 'G#':8, 'Ab':8, 'A':9, 'A#':10, 'Bb':10, 'B':11 };
     const pianoFreqs = {
@@ -231,8 +244,66 @@
     };
 
     function init() {
+        if (CONFIG.tonica) {
+            let el = document.getElementById('tonica');
+            if (el) el.value = CONFIG.tonica;
+        }
+        if (CONFIG.oitavaBase) {
+            let el = document.getElementById('oitava');
+            if (el) el.value = CONFIG.oitavaBase;
+        }
+
         renderSelects();
+
+        if (CONFIG.escalaNome && ESCALAS[CONFIG.escalaNome]) {
+            let el = document.getElementById('escala-select');
+            if (el) el.value = CONFIG.escalaNome;
+        }
+        if (CONFIG.ritmoNome && RITMOS[CONFIG.ritmoNome]) {
+            let el = document.getElementById('ritmo-select');
+            if (el) el.value = CONFIG.ritmoNome;
+        }
+        if (CONFIG.padraoNome && PADROES[CONFIG.padraoNome]) {
+            let el = document.getElementById('padrao-select');
+            if (el) el.value = CONFIG.padraoNome;
+        }
+        if (CONFIG.padraoFormula) {
+            let el = document.getElementById('padrao-formula');
+            if (el) el.value = CONFIG.padraoFormula;
+        }
+
         atualizarNotasWeb();
+
+        if (CONFIG.notaInicial) {
+            let sel = document.getElementById('nota-inicial-select');
+            if (sel) {
+                let exists = Array.from(sel.options).some(opt => opt.value === CONFIG.notaInicial);
+                if (!exists) {
+                    let opt = document.createElement('option');
+                    opt.value = CONFIG.notaInicial;
+                    opt.innerText = CONFIG.notaInicial;
+                    sel.appendChild(opt);
+                }
+                sel.value = CONFIG.notaInicial;
+            }
+        }
+
+        if (CONFIG.direcao) {
+            let el = document.getElementById('direcao');
+            if (el) el.value = CONFIG.direcao;
+        }
+        if (CONFIG.numCompassos) {
+            let el = document.getElementById('compassos');
+            if (el) el.value = CONFIG.numCompassos;
+        }
+        if (CONFIG.bpm) {
+            let el = document.getElementById('bpm');
+            if (el) el.value = CONFIG.bpm;
+        }
+        if (CONFIG.timeSignature) {
+            let el = document.getElementById('time-sig');
+            if (el) el.value = CONFIG.timeSignature;
+        }
     }
     function renderSelects() {
         populateSelect('escala-select', ESCALAS);
