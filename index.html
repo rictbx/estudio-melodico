@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estúdio Melódico & Gerador MIDI (v1.0.21)</title>
+    <title>Estúdio Melódico & Gerador MIDI (v1.0.23)</title>
     <script src="https://cdn.jsdelivr.net/npm/midi-writer-js@2.1.4/build/index.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -57,7 +57,7 @@
     <div class="app-header">
         <h1>Estúdio Melódico & Gerador MIDI</h1>
         <p>Crie, personalize e pré-visualize permutações e frases musicais</p>
-        <div class="version-badge">Versão v1.0.21</div>
+        <div class="version-badge">Versão v1.0.23</div>
     </div>
     <div class="form-group grid-2">
         <div>
@@ -132,7 +132,7 @@
         <div id="panel-padrao" class="collapsible-panel" style="border: 1px solid #ffc107;">
             <div style="font-size:0.82rem; font-weight:600; color:#ffc107; margin-bottom:8px;">Opções para Padrões:</div>
             <div class="form-group"><input type="text" id="pad-nome" placeholder="Nome do Padrão"></div>
-            <div class="form-group"><input type="text" id="pad-formula-edit" placeholder="Ex: 1,2,2#,3"></div>
+            <div class="form-group"><input type="text" id="pad-formula-edit" placeholder="Ex: 1,2,3"></div>
             <div class="input-row">
                 <button class="btn" style="flex:1; background:#d97706; color:#fff;" onclick="salvarPadraoWeb()">+ Salvar / Atualizar</button>
                 <button class="btn btn-danger" onclick="excluirPadraoWeb()">Excluir</button>
@@ -142,7 +142,7 @@
 
     <div class="form-group">
         <label>Fórmula Atual (Editável)</label>
-        <input type="text" id="padrao-formula" value="1,2,2#,3">
+        <input type="text" id="padrao-formula" value="1,2,3">
     </div>
 
     <div class="section-title">Controles de Áudio Web</div>
@@ -166,7 +166,7 @@
         </div>
     </div>
     <div class="grid-3 form-group">
-        <div><label>Compassos</label><input type="number" id="compassos" value="2" min="1" max="16"></div>
+        <div><label>Compassos</label><input type="number" id="compassos" value="8" min="1" max="16"></div>
         <div><label>BPM</label><input type="number" id="bpm" value="120" min="40" max="240"></div>
         <div>
             <label>Fórmula Compasso</label>
@@ -177,9 +177,43 @@
 </div>
 
 <script>
-    let ESCALAS = {"Menor Harm\u00f4nica": "1,2,3b,4,5,6b,7", "Menor Natural (E\u00f3lica)": "1,2,3b,4,5,6b,7b", "Menor Mel\u00f3dica": "1,2,3b,4,5,6,7", "Maior (J\u00f4nica)": "1,2,3,4,5,6,7", "D\u00f3rica": "1,2,3b,4,5,6,7b", "Fr\u00edgia": "1,2b,3b,4,5,6b,7b", "L\u00eddia": "1,2,3,4#,5,6,7", "Mixol\u00eddia": "1,2,3,4,5,7b", "Blues": "1,3b,4,4#,5,7b", "Dominante Bebop": "1,2,3,4,5,6,7b,7", "H\u00fangara Menor": "1,2,3b,4#,5,6b,7"};
-    let RITMOS = {"Tercinas de Colcheia": "tercina", "Sextina (6 semicolcheias)": "sextina", "Sem\u00ednima (1t)": "seminima", "Sem\u00ednima Pontuada (1.5t)": "seminima_pontuada", "M\u00ednima (2t)": "minima", "M\u00ednima Pontuada (3t)": "minima_pontuada", "Colcheia Pontuada + Semicolcheia": "colcheia pontuada, semicolcheia", "Semicolcheia + Colcheia Pontuada": "semicolcheia, colcheia pontuada", "Colcheia + 2 Semicolcheias": "colcheia, semicolcheia, semicolcheia", "2 Semicolcheias + Colcheia": "semicolcheia, semicolcheia, colcheia", "Semicolcheia + Colcheia + Semicolcheia": "semicolcheia, colcheia, semicolcheia", "Sem\u00ednima Pontuada + Colcheia": "seminima pontuada, colcheia", "M\u00ednima Pontuada + Sem\u00ednima": "minima pontuada, seminima", "Sem\u00ednima + M\u00ednima Pontuada": "seminima, minima pontuada"};
-    let PADROES = {"Crom\u00e1tico Tenso": "1,2,2#,3", "Linear Simples": "1,2,3", "Salto de Ter\u00e7a (1-3-2-4)": "1,3,2,4", "Giro em Torno do Grau (1-2-1-7b)": "1,2,1,7b", "Aproxima\u00e7\u00e3o Inferior (7b-1-2-3)": "7b,1,2,3", "Arpejo Ascendente (1-3-5-7)": "1,3,5,7"};
+    let ESCALAS = {
+  "Menor Harmônica": "1,2,3b,4,5,6b,7",
+  "Menor Natural (Eólica)": "1,2,3b,4,5,6b,7b",
+  "Menor Melódica": "1,2,3b,4,5,6,7",
+  "Maior (Jônica)": "1,2,3,4,5,6,7",
+  "Dórica": "1,2,3b,4,5,6,7b",
+  "Frígia": "1,2b,3b,4,5,6b,7b",
+  "Lídia": "1,2,3,4#,5,6,7",
+  "Mixolídia": "1,2,3,4,5,7b",
+  "Blues": "1,3b,4,4#,5,7b",
+  "Dominante Bebop": "1,2,3,4,5,6,7b,7",
+  "Húngara Menor": "1,2,3b,4#,5,6b,7"
+};
+    let RITMOS = {
+  "Tercinas de Colcheia": "tercina",
+  "Sextina (6 semicolcheias)": "sextina",
+  "Semínima (1t)": "seminima",
+  "Semínima Pontuada (1.5t)": "seminima_pontuada",
+  "Mínima (2t)": "minima",
+  "Mínima Pontuada (3t)": "minima_pontuada",
+  "Colcheia Pontuada + Semicolcheia": "colcheia pontuada, semicolcheia",
+  "Semicolcheia + Colcheia Pontuada": "semicolcheia, colcheia pontuada",
+  "Colcheia + 2 Semicolcheias": "colcheia, semicolcheia, semicolcheia",
+  "2 Semicolcheias + Colcheia": "semicolcheia, semicolcheia, colcheia",
+  "Semicolcheia + Colcheia + Semicolcheia": "semicolcheia, colcheia, semicolcheia",
+  "Semínima Pontuada + Colcheia": "seminima pontuada, colcheia",
+  "Mínima Pontuada + Semínima": "minima pontuada, seminima",
+  "Semínima + Mínima Pontuada": "seminima, minima pontuada"
+};
+    let PADROES = {
+  "Linear Simples (1,2,3)": "1,2,3",
+  "Cromático Tenso": "1,2,2#,3",
+  "Salto de Terça (1-3-2-4)": "1,3,2,4",
+  "Giro em Torno do Grau (1-2-1-7b)": "1,2,1,7b",
+  "Aproximação Inferior (7b-1-2-3)": "7b,1,2,3",
+  "Arpejo Ascendente (1-3-5-7)": "1,3,5,7"
+};
 
     const notaValores = { 'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'F':5, 'F#':6, 'Gb':6, 'G':7, 'G#':8, 'Ab':8, 'A':9, 'A#':10, 'Bb':10, 'B':11 };
     const pianoFreqs = {
@@ -206,6 +240,7 @@
     }
     function populateSelect(id, dict) {
         const sel = document.getElementById(id);
+        if (!sel) return;
         const currVal = sel.value;
         sel.innerHTML = '';
         for (let key in dict) {
@@ -218,6 +253,7 @@
     }
     function toggleMenu(panelId) {
         const p = document.getElementById(panelId);
+        if (!p) return;
         const isOpen = p.classList.contains('open');
         document.querySelectorAll('.collapsible-panel').forEach(el => el.classList.remove('open'));
         if (!isOpen) {
@@ -280,9 +316,13 @@
     }
     function addNoteFigure(fig) {
         const input = document.getElementById('rit-formula');
+        if (!input) return;
         input.value = input.value ? input.value + ', ' + fig : fig;
     }
-    function clearRhythmFormula() { document.getElementById('rit-formula').value = ''; }
+    function clearRhythmFormula() { 
+        const input = document.getElementById('rit-formula');
+        if (input) input.value = ''; 
+    }
 
     function salvarPadraoWeb() {
         let n = document.getElementById('pad-nome').value.trim();
@@ -306,7 +346,8 @@
     }
     function aoMudarPadrao() {
         const sel = document.getElementById('padrao-select').value;
-        document.getElementById('padrao-formula').value = PADROES[sel] || '1,2,3';
+        const el = document.getElementById('padrao-formula');
+        if (el) el.value = PADROES[sel] || '1,2,3';
     }
 
     function parseEscalaIntervalos(formulaStr) {
@@ -337,7 +378,7 @@
         return interv.map(iv => {
             let total = baseVal + iv;
             let oit = Math.floor(total / 12) - 1;
-            let nIdx = total % 12;
+            let nIdx = (total % 12 + 12) % 12;
             return nomesNotas[nIdx] + oit;
         });
     }
@@ -345,6 +386,7 @@
     function atualizarNotasWeb() {
         const notas = obterNotasEscalaWeb();
         const sel = document.getElementById('nota-inicial-select');
+        if (!sel) return;
         sel.innerHTML = '';
         notas.forEach(n => {
             let opt = document.createElement('option');
@@ -352,6 +394,73 @@
             opt.innerText = n;
             sel.appendChild(opt);
         });
+    }
+
+    function getDuracaoValorWeb(termo) {
+        let t = termo.toLowerCase().trim();
+        if (t.includes('tercina')) return 1.0 / 3.0;
+        if (t.includes('sextina')) return 1.0 / 6.0;
+        if (t.includes('minima')) return 2.0;
+        if (t.includes('seminima')) return 1.0;
+        if (t.includes('semicolcheia')) return 0.25;
+        if (t.includes('colcheia')) return 0.5;
+        return 0.5;
+    }
+
+    function gerarSequenciaNotasWeb() {
+        const notasEscala = obterNotasEscalaWeb();
+        const compassos = parseInt(document.getElementById('compassos').value) || 8;
+        const timeSig = document.getElementById('time-sig').value;
+        const partesComp = timeSig.split('/');
+        const numTemposComp = parseInt(partesComp[0]) || 4;
+        
+        const direcao = document.getElementById('direcao').value;
+        const notaInicial = document.getElementById('nota-inicial-select').value;
+        
+        let totalTemposDesejados = (timeSig === '6/8') ? (compassos * 3.0) : (compassos * numTemposComp);
+
+        let padraoStr = document.getElementById('padrao-formula').value.trim();
+        let graus = padraoStr.split(',').map(x => {
+            let clean = x.trim();
+            let mod = 0;
+            if (clean.includes('#')) { mod = 1; clean = clean.replace('#', ''); }
+            else if (clean.includes('b')) { mod = -1; clean = clean.replace('b', ''); }
+            return { grau: parseInt(clean) - 1, mod: mod };
+        });
+
+        let startIndex = notasEscala.indexOf(notaInicial);
+        if (startIndex === -1) startIndex = 0;
+
+        let tempoAcumulado = 0.0;
+        let passoIdx = 0;
+        let contador = 0;
+
+        let ritmoSel = document.getElementById('ritmo-select').value;
+        let ritmoStr = RITMOS[ritmoSel] || 'colcheia';
+        let itensRitmo = ritmoStr.split(',').map(x => x.trim().toLowerCase());
+
+        let notasFinal = [];
+        let duracoesFinal = [];
+
+        while (tempoAcumulado < totalTemposDesejados && passoIdx < 500) {
+            let baseIdx = direcao === 'desc' ? startIndex - passoIdx : startIndex + passoIdx;
+            for (let g of graus) {
+                let idxFinal = direcao === 'desc' ? baseIdx - g.grau : baseIdx + g.grau;
+                if (idxFinal >= 0 && idxFinal < notasEscala.length) {
+                    let nName = notasEscala[idxFinal];
+                    let termoRit = itensRitmo[contador % itensRitmo.length];
+                    let durVal = getDuracaoValorWeb(termoRit);
+
+                    notasFinal.push(nName);
+                    duracoesFinal.push(durVal);
+
+                    tempoAcumulado += durVal;
+                    contador++;
+                }
+            }
+            passoIdx++;
+        }
+        return { notas: notasFinal, duracoes: duracoesFinal };
     }
 
     let globalAudioCtx = null;
@@ -367,8 +476,10 @@
             globalAudioCtx.close();
         }
         audioAtivoWeb = null;
-        document.getElementById('btn-ouvir-escala-web').innerText = "▶ Ouvir Escala";
-        document.getElementById('btn-ouvir-prog-web').innerText = "▶ Ouvir Progressão";
+        const b1 = document.getElementById('btn-ouvir-escala-web');
+        const b2 = document.getElementById('btn-ouvir-prog-web');
+        if (b1) b1.innerText = "▶ Ouvir Escala";
+        if (b2) b2.innerText = "▶ Ouvir Progressão";
     }
 
     function tocarSequenciaWeb(notas, duracoes, bpm, tipo, btnId) {
@@ -379,7 +490,7 @@
         pararAudioWeb();
         audioAtivoWeb = tipo;
         const btn = document.getElementById(btnId);
-        btn.innerText = "⏹ Parar " + (tipo === 'escala' ? "Escala" : "Progressão");
+        if (btn) btn.innerText = "⏹ Parar " + (tipo === 'escala' ? "Escala" : "Progressão");
 
         globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
@@ -419,83 +530,17 @@
     }
 
     function tocarProgressaoWeb() {
-        const notasEscala = obterNotasEscalaWeb();
+        const res = gerarSequenciaNotasWeb();
         const bpm = parseInt(document.getElementById('bpm').value) || 120;
-        const compassos = parseInt(document.getElementById('compassos').value) || 2;
-        const timeSig = document.getElementById('time-sig').value;
-        const temposComp = parseInt(timeSig.split('/')[0]) || 4;
-        const direcao = document.getElementById('direcao').value;
-        const notaInicial = document.getElementById('nota-inicial-select').value;
-        
-        let padraoStr = document.getElementById('padrao-formula').value.trim();
-        let graus = padraoStr.split(',').map(x => {
-            let clean = x.trim();
-            let mod = 0;
-            if (clean.includes('#')) { mod = 1; clean = clean.replace('#', ''); }
-            else if (clean.includes('b')) { mod = -1; clean = clean.replace('b', ''); }
-            return { grau: parseInt(clean) - 1, mod: mod };
-        });
-
-        let startIndex = notasEscala.indexOf(notaInicial);
-        if (startIndex === -1) startIndex = 0;
-
-        let totalNotasDesejadas = compassos * temposComp;
-        let passos = Math.max(1, Math.floor(totalNotasDesejadas / graus.length));
-        
-        let notasFinal = [];
-        let duracoesFinal = [];
-        let ritmoSel = document.getElementById('ritmo-select').value;
-        let ritmoStr = RITMOS[ritmoSel] || 'colcheia';
-        let itensRitmo = ritmoStr.split(',').map(x => x.trim().toLowerCase());
-
-        let count = 0;
-        for (let i = 0; i < passos; i++) {
-            let baseIdx = direcao === 'desc' ? startIndex - i : startIndex + i;
-            graus.forEach(g => {
-                let idxFinal = direcao === 'desc' ? baseIdx - g.grau : baseIdx + g.grau;
-                if (idxFinal >= 0 && idxFinal < notasEscala.length) {
-                    notasFinal.push(notasEscala[idxFinal]);
-                    let rItem = itensRitmo[count % itensRitmo.length];
-                    let dur = 1.0;
-                    if (rItem.includes('seminima')) dur = 1.0;
-                    else if (rItem.includes('colcheia')) dur = 0.5;
-                    else if (rItem.includes('semicolcheia')) dur = 0.25;
-                    else if (rItem.includes('minima')) dur = 2.0;
-                    else if (rItem.includes('tercina')) dur = 0.333;
-                    duracoesFinal.push(dur);
-                    count++;
-                }
-            });
-        }
-        if (notasFinal.length === 0) notasFinal = [notasEscala[0]];
-        if (duracoesFinal.length === 0) duracoesFinal = [1.0];
-
-        tocarSequenciaWeb(notasFinal, duracoesFinal, bpm, 'progressao', 'btn-ouvir-prog-web');
+        tocarSequenciaWeb(res.notas, res.duracoes, bpm, 'progressao', 'btn-ouvir-prog-web');
     }
 
     function gerarEBaixarMIDI() {
         try {
-            const tonica = document.getElementById('tonica').value;
-            const oitava = document.getElementById('oitava').value;
+            const res = gerarSequenciaNotasWeb();
             const bpm = parseInt(document.getElementById('bpm').value) || 120;
-            const notasEscala = obterNotasEscalaWeb();
             const timeSig = document.getElementById('time-sig').value;
             const temposComp = parseInt(timeSig.split('/')[0]) || 4;
-            const compassos = parseInt(document.getElementById('compassos').value) || 2;
-            const direcao = document.getElementById('direcao').value;
-            const notaInicial = document.getElementById('nota-inicial-select').value;
-            
-            let padraoStr = document.getElementById('padrao-formula').value.trim();
-            let graus = padraoStr.split(',').map(x => {
-                let clean = x.trim();
-                let mod = 0;
-                if (clean.includes('#')) { mod = 1; clean = clean.replace('#', ''); }
-                else if (clean.includes('b')) { mod = -1; clean = clean.replace('b', ''); }
-                return { grau: parseInt(clean) - 1, mod: mod };
-            });
-
-            let startIndex = notasEscala.indexOf(notaInicial);
-            if (startIndex === -1) startIndex = 0;
 
             let track = new MidiWriter.Track();
             track.setTimeSignature(temposComp, 4);
@@ -505,42 +550,31 @@
             let ritmoStr = RITMOS[ritmoSel] || 'colcheia';
             let itensRitmo = ritmoStr.split(',').map(x => x.trim().toLowerCase());
 
-            let totalNotasDesejadas = compassos * temposComp;
-            let passos = Math.max(1, Math.floor(totalNotasDesejadas / graus.length));
-            let count = 0;
+            res.notas.forEach((nName, i) => {
+                let rItem = itensRitmo[i % itensRitmo.length];
+                let duracaoMw = '4';
+                if (rItem.includes('seminima')) duracaoMw = '4';
+                else if (rItem.includes('colcheia')) duracaoMw = '8';
+                else if (rItem.includes('semicolcheia')) duracaoMw = '16';
+                else if (rItem.includes('minima')) duracaoMw = '2';
+                else if (rItem.includes('tercina')) duracaoMw = '8t';
 
-            for (let i = 0; i < passos; i++) {
-                let baseIdx = direcao === 'desc' ? startIndex - i : startIndex + i;
-                graus.forEach(g => {
-                    let idxFinal = direcao === 'desc' ? baseIdx - g.grau : baseIdx + g.grau;
-                    if (idxFinal >= 0 && idxFinal < notasEscala.length) {
-                        let nName = notasEscala[idxFinal];
-                        let rItem = itensRitmo[count % itensRitmo.length];
-                        let duracaoMw = '4';
-                        if (rItem.includes('seminima')) duracaoMw = '4';
-                        else if (rItem.includes('colcheia')) duracaoMw = '8';
-                        else if (rItem.includes('semicolcheia')) duracaoMw = '16';
-                        else if (rItem.includes('minima')) duracaoMw = '2';
-                        else if (rItem.includes('tercina')) duracaoMw = '8t';
-
-                        let noteObj = new MidiWriter.NoteEvent({
-                            pitch: [nName],
-                            duration: duracaoMw
-                        });
-                        track.addEvent(noteObj);
-                        count++;
-                    }
+                let noteObj = new MidiWriter.NoteEvent({
+                    pitch: [nName],
+                    duration: duracaoMw
                 });
-            }
+                track.addEvent(noteObj);
+            });
 
             let writer = new MidiWriter.Writer([track]);
             let uri = writer.dataUri();
-            let link = document.createElement('a');
-            link.href = uri;
-            link.download = `estudio_melodico_v1.0.21.mid`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            let link = document.getElementById('a');
+            let a = document.createElement('a');
+            a.href = uri;
+            a.download = "estudio_melodico_v1.0.23.mid";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         } catch(e) {
             alert("Erro ao gerar MIDI: " + e.message);
         }
