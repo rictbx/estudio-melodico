@@ -369,11 +369,11 @@
 
     function obterNotasEscalaWeb() {
         const tonica = document.getElementById('tonica').value;
-        const oitava = parseInt(document.getElementById('oitava').value);
+        const oitava = parseInt(document.getElementById('oitava').value) || 4;
         const tipoEscala = document.getElementById('escala-select').value;
         const formulaStr = ESCALAS[tipoEscala] || '1,2,3,4,5,6,7';
         const interv = parseEscalaIntervalos(formulaStr);
-        let baseVal = (notaValores[tonica] !== undefined ? notaValores[tonica] : 0) + (oitava + 1) * 12;
+        let baseVal = (notaValores[tonica] !== undefined ? notaValores[tonica] : 9) + (oitava + 1) * 12;
         const nomesNotas = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         return interv.map(iv => {
             let total = baseVal + iv;
@@ -381,6 +381,54 @@
             let nIdx = (total % 12 + 12) % 12;
             return nomesNotas[nIdx] + oit;
         });
+    }
+
+    function getNoteMidiWeb(noteStr) {
+        let match = noteStr ? noteStr.match(/^([A-G][#b]?)(-?d+)$/) : null;
+        if (!match) return 69;
+        let letter = match[1];
+        let oct = parseInt(match[2]);
+        let semitone = notaValores[letter] !== undefined ? notaValores[letter] : 0;
+        return (oct + 1) * 12 + semitone;
+    }
+
+    function getNoteFreqWeb(noteStr) {
+        if (pianoFreqs[noteStr]) return pianoFreqs[noteStr];
+        let midi = getNoteMidiWeb(noteStr);
+        return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+
+    function obterEscalaExtendidaWeb() {
+        const tonica = document.getElementById('tonica').value;
+        const tipoEscala = document.getElementById('escala-select').value;
+        const formulaStr = ESCALAS[tipoEscala] || '1,2,3,4,5,6,7';
+        const scaleDegrees = formulaStr.split(',').map(x => x.trim()).filter(Boolean);
+        const baseMaj = [0, 2, 4, 5, 7, 9, 11];
+        const nomesNotas = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const tonicaVal = notaValores[tonica] !== undefined ? notaValores[tonica] : 9;
+
+        let escalaExt = [];
+
+        for (let currentOct = 0; currentOct <= 8; currentOct++) {
+            let rootMidi = (currentOct + 1) * 12 + tonicaVal;
+            scaleDegrees.forEach(item => {
+                let mod = 0;
+                let baseStr = item;
+                if (item.includes('#')) { mod = 1; baseStr = item.replace('#', ''); }
+                else if (item.includes('b')) { mod = -1; baseStr = item.replace('b', ''); }
+                let idxG = parseInt(baseStr) - 1;
+                if (!isNaN(idxG) && idxG >= 0 && idxG < baseMaj.length) {
+                    let semitoneOffset = baseMaj[idxG] + mod;
+                    let midi = rootMidi + semitoneOffset;
+                    if (midi >= 21 && midi <= 108) {
+                        let oct = Math.floor(midi / 12) - 1;
+                        let nIdx = (midi % 12 + 12) % 12;
+                        escalaExt.push({ pitchStr: nomesNotas[nIdx] + oct, midi: midi });
+                    }
+                }
+            });
+        }
+        return escalaExt;
     }
 
     function atualizarNotasWeb() {
@@ -400,23 +448,44 @@
         let t = termo.toLowerCase().trim();
         if (t.includes('tercina')) return 1.0 / 3.0;
         if (t.includes('sextina')) return 1.0 / 6.0;
-        if (t.includes('minima')) return 2.0;
-        if (t.includes('seminima')) return 1.0;
-        if (t.includes('semicolcheia')) return 0.25;
-        if (t.includes('colcheia')) return 0.5;
+        if (t.includes('semibreve')) return 4.0;
+        if (t.includes('minima') || t.includes('mínima')) return t.includes('pont') ? 3.0 : 2.0;
+        if (t.includes('seminima') || t.includes('semínima')) return t.includes('pont') ? 1.5 : 1.0;
+        if (t.includes('semicolcheia')) return t.includes('pont') ? 0.375 : 0.25;
+        if (t.includes('colcheia')) return t.includes('pont') ? 0.75 : 0.5;
         return 0.5;
     }
 
     function gerarSequenciaNotasWeb() {
-        const notasEscala = obterNotasEscalaWeb();
+        const escalaExt = obterEscalaExtendidaWeb();
         const compassos = parseInt(document.getElementById('compassos').value) || 8;
         const timeSig = document.getElementById('time-sig').value;
         const partesComp = timeSig.split('/');
         const numTemposComp = parseInt(partesComp[0]) || 4;
         
         const direcao = document.getElementById('direcao').value;
-        const notaInicial = document.getElementById('nota-inicial-select').value;
-        
+        let notaInicial = document.getElementById('nota-inicial-select').value;
+        const oitavaBase = parseInt(document.getElementById('oitava').value) || 4;
+
+        if (!notaInicial) {
+            const tonica = document.getElementById('tonica').value || 'A';
+            notaInicial = tonica + oitavaBase;
+        } else if (!/d/.test(notaInicial)) {
+            notaInicial += oitavaBase;
+        }
+
+        const targetMidi = getNoteMidiWeb(notaInicial);
+
+        let startIndex = 0;
+        let minDist = 999;
+        escalaExt.forEach((item, idx) => {
+            let dist = Math.abs(item.midi - targetMidi);
+            if (dist < minDist) {
+                minDist = dist;
+                startIndex = idx;
+            }
+        });
+
         let totalTemposDesejados = (timeSig === '6/8') ? (compassos * 3.0) : (compassos * numTemposComp);
 
         let padraoStr = document.getElementById('padrao-formula').value.trim();
@@ -425,38 +494,48 @@
             let mod = 0;
             if (clean.includes('#')) { mod = 1; clean = clean.replace('#', ''); }
             else if (clean.includes('b')) { mod = -1; clean = clean.replace('b', ''); }
-            return { grau: parseInt(clean) - 1, mod: mod };
+            let g = parseInt(clean) - 1;
+            return { degree: isNaN(g) ? 0 : g, mod: mod };
         });
-
-        let startIndex = notasEscala.indexOf(notaInicial);
-        if (startIndex === -1) startIndex = 0;
 
         let tempoAcumulado = 0.0;
         let passoIdx = 0;
         let contador = 0;
+        const isDesc = direcao === 'desc';
 
         let ritmoSel = document.getElementById('ritmo-select').value;
         let ritmoStr = RITMOS[ritmoSel] || 'colcheia';
-        let itensRitmo = ritmoStr.split(',').map(x => x.trim().toLowerCase());
+        let itensRitmo = ritmoStr.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+        if (itensRitmo.length === 0) itensRitmo = ['colcheia'];
 
         let notasFinal = [];
         let duracoesFinal = [];
 
-        while (tempoAcumulado < totalTemposDesejados && passoIdx < 500) {
-            let baseIdx = direcao === 'desc' ? startIndex - passoIdx : startIndex + passoIdx;
-            for (let g of graus) {
-                let idxFinal = direcao === 'desc' ? baseIdx - g.grau : baseIdx + g.grau;
-                if (idxFinal >= 0 && idxFinal < notasEscala.length) {
-                    let nName = notasEscala[idxFinal];
-                    let termoRit = itensRitmo[contador % itensRitmo.length];
-                    let durVal = getDuracaoValorWeb(termoRit);
+        while (tempoAcumulado < totalTemposDesejados && passoIdx < 1000) {
+            let baseIdx = isDesc ? startIndex - passoIdx : startIndex + passoIdx;
 
-                    notasFinal.push(nName);
-                    duracoesFinal.push(durVal);
+            for (let p of graus) {
+                if (tempoAcumulado >= totalTemposDesejados) break;
 
-                    tempoAcumulado += durVal;
-                    contador++;
-                }
+                let idxFinal = isDesc ? baseIdx - p.degree : baseIdx + p.degree;
+                let validIdx = Math.max(0, Math.min(escalaExt.length - 1, idxFinal));
+
+                let midiFinal = escalaExt[validIdx].midi + p.mod;
+                midiFinal = Math.max(21, Math.min(108, midiFinal));
+
+                let oct = Math.floor(midiFinal / 12) - 1;
+                let nIdx = (midiFinal % 12 + 12) % 12;
+                let nomesNotas = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                let nName = nomesNotas[nIdx] + oct;
+
+                let termoRit = itensRitmo[contador % itensRitmo.length];
+                let durVal = getDuracaoValorWeb(termoRit);
+
+                notasFinal.push(nName);
+                duracoesFinal.push(durVal);
+
+                tempoAcumulado += durVal;
+                contador++;
             }
             passoIdx++;
         }
@@ -506,9 +585,9 @@
             let osc = globalAudioCtx.createOscillator();
             let gain = globalAudioCtx.createGain();
             osc.type = 'triangle';
-            osc.frequency.value = pianoFreqs[nota] || 440;
+            osc.frequency.value = getNoteFreqWeb(nota);
             gain.gain.setValueAtTime(0.2, scheduleTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, scheduleTime + dur);
+            gain.gain.exponentialRampToValueAtTime(0.0001, scheduleTime + (dur * 0.95));
             osc.connect(gain);
             gain.connect(globalAudioCtx.destination);
             osc.start(scheduleTime);
@@ -548,15 +627,17 @@
 
             let ritmoSel = document.getElementById('ritmo-select').value;
             let ritmoStr = RITMOS[ritmoSel] || 'colcheia';
-            let itensRitmo = ritmoStr.split(',').map(x => x.trim().toLowerCase());
+            let itensRitmo = ritmoStr.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+            if (itensRitmo.length === 0) itensRitmo = ['colcheia'];
 
             res.notas.forEach((nName, i) => {
                 let rItem = itensRitmo[i % itensRitmo.length];
                 let duracaoMw = '4';
-                if (rItem.includes('seminima')) duracaoMw = '4';
-                else if (rItem.includes('colcheia')) duracaoMw = '8';
-                else if (rItem.includes('semicolcheia')) duracaoMw = '16';
-                else if (rItem.includes('minima')) duracaoMw = '2';
+                if (rItem.includes('semibreve')) duracaoMw = '1';
+                else if (rItem.includes('minima') || rItem.includes('mínima')) duracaoMw = rItem.includes('pont') ? '2d' : '2';
+                else if (rItem.includes('seminima') || rItem.includes('semínima')) duracaoMw = rItem.includes('pont') ? '4d' : '4';
+                else if (rItem.includes('semicolcheia')) duracaoMw = rItem.includes('pont') ? '16d' : '16';
+                else if (rItem.includes('colcheia')) duracaoMw = rItem.includes('pont') ? '8d' : '8';
                 else if (rItem.includes('tercina')) duracaoMw = '8t';
 
                 let noteObj = new MidiWriter.NoteEvent({
@@ -568,7 +649,6 @@
 
             let writer = new MidiWriter.Writer([track]);
             let uri = writer.dataUri();
-            let link = document.getElementById('a');
             let a = document.createElement('a');
             a.href = uri;
             a.download = "estudio_melodico_v1.0.23.mid";
