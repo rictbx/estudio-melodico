@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estúdio Melódico & Gerador MIDI</title>
+    <title>Estúdio Melódico & Gerador MIDI (v1.0.2)</title>
     <script src="https://cdn.jsdelivr.net/npm/midi-writer-js@2.1.4/build/index.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -25,9 +25,10 @@
         * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
         body { background: var(--bg-gradient); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 30px 15px; }
         .app-card { background: var(--panel-bg); backdrop-filter: blur(16px); border: 1px solid var(--panel-border); border-radius: 20px; width: 100%; max-width: 680px; padding: 32px; box-shadow: var(--card-shadow); }
-        .app-header { text-align: center; margin-bottom: 28px; }
+        .app-header { text-align: center; margin-bottom: 28px; position: relative; }
         .app-header h1 { font-size: 1.8rem; font-weight: 700; background: linear-gradient(to right, #a5b4fc, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
         .app-header p { color: var(--text-muted); font-size: 0.9rem; }
+        .version-badge { display: inline-block; background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-top: 6px; }
         .section-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-secondary); font-weight: 600; margin: 24px 0 14px 0; display: flex; align-items: center; gap: 8px; }
         .section-title::after { content: ''; flex: 1; height: 1px; background: var(--panel-border); }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -62,6 +63,7 @@
     <div class="app-header">
         <h1>Estúdio Melódico & Gerador MIDI</h1>
         <p>Crie, personalize e pré-visualize permutações e frases musicais</p>
+        <div class="version-badge">Versão v1.0.2</div>
     </div>
     <div class="form-group grid-2">
         <div>
@@ -486,7 +488,6 @@
             }
         };
 
-        // Suporte global para a Barra de Espaço
         if (!window.spacebarListenerAdded) {
             window.spacebarListenerAdded = true;
             window.addEventListener('keydown', function(e) {
