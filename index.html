@@ -180,7 +180,30 @@
         </div>
         <div>
             <label>Ritmo do Acorde</label>
-            <select id="acorde-ritmo-select"></select>
+            <div class="input-row">
+                <select id="acorde-ritmo-select"></select>
+                <button class="btn btn-icon" title="Opções de Ritmo do Acorde" onclick="toggleMenu('panel-acorde-ritmo')">⋮</button>
+            </div>
+            <div id="panel-acorde-ritmo" class="collapsible-panel" style="border: 1px solid #10b981;">
+                <div style="font-size:0.82rem; font-weight:600; color:#10b981; margin-bottom:8px;">Opções de Ritmo do Acorde:</div>
+                <div class="form-group"><input type="text" id="acorde-ritmo-nome" placeholder="Nome do Ritmo"></div>
+                <div class="form-group"><input type="text" id="acorde-ritmo-formula-edit" placeholder="Ex: minima, seminima, colcheia"></div>
+                <div style="margin-bottom:8px;">
+                    <div style="font-size:0.75rem; color:#9ca3af; margin-bottom:4px;">Inserir figura:</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                        <button type="button" class="btn" style="padding:2px 6px; font-size:0.75rem;" onclick="addRitmoFiguraWeb('acorde-ritmo-formula-edit', 'seminima')">𝅘𝅥 Semínima</button>
+                        <button type="button" class="btn" style="padding:2px 6px; font-size:0.75rem;" onclick="addRitmoFiguraWeb('acorde-ritmo-formula-edit', 'colcheia')">♪ Colcheia</button>
+                        <button type="button" class="btn" style="padding:2px 6px; font-size:0.75rem;" onclick="addRitmoFiguraWeb('acorde-ritmo-formula-edit', 'semicolcheia')">𝅘𝅥𝅯 Semicolcheia</button>
+                        <button type="button" class="btn" style="padding:2px 6px; font-size:0.75rem;" onclick="addRitmoFiguraWeb('acorde-ritmo-formula-edit', 'tercina')">𝅘𝅥³ Tercina</button>
+                        <button type="button" class="btn" style="padding:2px 6px; font-size:0.75rem;" onclick="addRitmoFiguraWeb('acorde-ritmo-formula-edit', 'minima')">𝅗𝅥 Mínima</button>
+                        <button type="button" class="btn" style="padding:2px 6px; font-size:0.75rem;" onclick="addRitmoFiguraWeb('acorde-ritmo-formula-edit', 'semibreve')">𝅝 Semibreve</button>
+                    </div>
+                </div>
+                <div class="input-row">
+                    <button class="btn" style="flex:1; background:#059669; color:#fff;" onclick="salvarAcordeRitmoWeb()">+ Salvar Ritmo</button>
+                    <button class="btn btn-danger" onclick="excluirAcordeRitmoWeb()">Excluir</button>
+                </div>
+            </div>
         </div>
     </div>
     <div class="form-group" style="display:flex; align-items:center; justify-content:space-between; background:#111827; padding:10px; border-radius:8px;">
@@ -429,6 +452,9 @@
             } else if (panelId === 'panel-acorde') {
                 document.getElementById('acorde-nome').value = document.getElementById('acorde-select').value;
                 document.getElementById('acorde-formula-edit').value = ACORDES[document.getElementById('acorde-select').value] || '';
+            } else if (panelId === 'panel-acorde-ritmo') {
+                document.getElementById('acorde-ritmo-nome').value = document.getElementById('acorde-ritmo-select').value;
+                document.getElementById('acorde-ritmo-formula-edit').value = RITMOS[document.getElementById('acorde-ritmo-select').value] || '';
             }
         }
     }
@@ -527,6 +553,34 @@
         if (Object.keys(ACORDES).length > 1) {
             delete ACORDES[sel];
             populateSelect('acorde-select', ACORDES);
+            fecharPaineisWeb();
+        }
+    }
+
+    function addRitmoFiguraWeb(inputId, fig) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.value = input.value ? input.value + ', ' + fig : fig;
+    }
+
+    function salvarAcordeRitmoWeb() {
+        let n = document.getElementById('acorde-ritmo-nome').value.trim();
+        let f = document.getElementById('acorde-ritmo-formula-edit').value.trim();
+        if (n && f) {
+            RITMOS[n] = f;
+            populateSelect('ritmo-select', RITMOS);
+            populateSelect('acorde-ritmo-select', RITMOS);
+            document.getElementById('acorde-ritmo-select').value = n;
+            fecharPaineisWeb();
+        }
+    }
+
+    function excluirAcordeRitmoWeb() {
+        let sel = document.getElementById('acorde-ritmo-select').value;
+        if (Object.keys(RITMOS).length > 1) {
+            delete RITMOS[sel];
+            populateSelect('ritmo-select', RITMOS);
+            populateSelect('acorde-ritmo-select', RITMOS);
             fecharPaineisWeb();
         }
     }
