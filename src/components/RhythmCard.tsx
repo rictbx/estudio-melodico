@@ -14,6 +14,8 @@ interface RhythmCardProps {
   setNumCompassos?: (val: number) => void;
   timeSignature?: TimeSignatureType;
   setTimeSignature?: (val: TimeSignatureType) => void;
+  isMetronomeActive?: boolean;
+  onToggleMetronome?: () => void;
 }
 
 const FIGURAS_NOTAS = [
@@ -57,6 +59,8 @@ export const RhythmCard: React.FC<RhythmCardProps> = ({
   setNumCompassos,
   timeSignature = '4/4',
   setTimeSignature,
+  isMetronomeActive = false,
+  onToggleMetronome,
 }) => {
   const [isOpenPanel, setIsOpenPanel] = useState(false);
   const [inputNome, setInputNome] = useState(ritmoNome);
@@ -241,6 +245,48 @@ export const RhythmCard: React.FC<RhythmCardProps> = ({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Metronome Toggle Switch (Positioned right below BPM control) */}
+      <div className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl p-2.5 mb-3">
+        <div className="flex items-center gap-2.5">
+          <span className="text-base">⏱️</span>
+          <div className="flex flex-col">
+            <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
+              Metrônomo
+              <span
+                className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-black border transition ${
+                  isMetronomeActive
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm shadow-amber-500/20 animate-pulse'
+                    : 'bg-slate-900 text-slate-500 border-slate-800'
+                }`}
+              >
+                {isMetronomeActive ? 'ON' : 'OFF'}
+              </span>
+            </span>
+            <span className="text-[11px] text-slate-400 font-mono">
+              Clique síncrono a {bpm} BPM
+            </span>
+          </div>
+        </div>
+
+        {/* Interactive Toggle Switch */}
+        <button
+          type="button"
+          onClick={() => onToggleMetronome?.()}
+          className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950 ${
+            isMetronomeActive ? 'bg-amber-500' : 'bg-slate-800'
+          }`}
+          role="switch"
+          aria-checked={isMetronomeActive}
+          title={isMetronomeActive ? 'Desativar clique do metrônomo' : 'Ativar clique do metrônomo'}
+        >
+          <span
+            className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-slate-950 shadow-md ring-0 transition duration-200 ease-in-out ${
+              isMetronomeActive ? 'translate-x-5' : 'translate-x-0'
+            }`}
+          />
+        </button>
       </div>
 
       <div className="text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">

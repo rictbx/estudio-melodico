@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from './components/Header';
 import { ScaleCard } from './components/ScaleCard';
 import { RhythmCard } from './components/RhythmCard';
+import { MetronomeCard } from './components/MetronomeCard';
 import { PatternCard } from './components/PatternCard';
 import { ChordCard } from './components/ChordCard';
 import { AudioActionButtons } from './components/AudioActionButtons';
@@ -23,6 +24,7 @@ import {
   baixarMidiFile,
 } from './utils/musicTheory';
 import { audioEngine } from './utils/audioEngine';
+import { metronomeEngine } from './utils/metronomeEngine';
 
 export default function App() {
   // Custom Dictionaries State
@@ -67,6 +69,36 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playingType, setPlayingType] = useState<'escala' | 'progressao' | 'acorde' | null>(null);
   const [activeNoteIndex, setActiveNoteIndex] = useState<number | null>(null);
+
+  // Metronome State & Subscription
+  const [isMetronomeActive, setIsMetronomeActive] = useState<boolean>(false);
+
+  useEffect(() => {
+    const unsubscribe = metronomeEngine.subscribe((running) => {
+      setIsMetronomeActive(running);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Synchronize metronome BPM dynamically whenever BPM changes
+  useEffect(() => {
+    metronomeEngine.setBpm(bpm);
+  }, [bpm]);
+
+  // Synchronize beats per measure when timeSignature changes
+  useEffect(() => {
+    const totalBeats = timeSignature === '3/4' ? 3 : timeSignature === '6/8' ? 6 : timeSignature === '2/4' ? 2 : 4;
+    metronomeEngine.setBeatsPerMeasure(totalBeats);
+  }, [timeSignature]);
+
+  const handleToggleMetronome = () => {
+    if (isMetronomeActive) {
+      metronomeEngine.stop();
+    } else {
+      const totalBeats = timeSignature === '3/4' ? 3 : timeSignature === '6/8' ? 6 : timeSignature === '2/4' ? 2 : 4;
+      metronomeEngine.start(bpm, totalBeats);
+    }
+  };
 
   // Modal States
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -403,6 +435,15 @@ export default function App() {
           setBpm={setBpm}
           numCompassos={numCompassos}
           setNumCompassos={setNumCompassos}
+          timeSignature={timeSignature}
+          setTimeSignature={setTimeSignature}
+          isMetronomeActive={isMetronomeActive}
+          onToggleMetronome={handleToggleMetronome}
+        />
+
+        <MetronomeCard
+          bpm={bpm}
+          setBpm={setBpm}
           timeSignature={timeSignature}
           setTimeSignature={setTimeSignature}
         />
