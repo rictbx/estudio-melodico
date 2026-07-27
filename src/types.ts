@@ -50,6 +50,11 @@ export interface GeneratorResult {
   timeSignature?: TimeSignatureType;
   listaNotasNome: string[];
   listaDuracoesBeats: number[];
+  padraoNome?: string;
+  padraoFormula?: string;
+  acordeNome?: string;
+  cifraAcorde?: string;
+  acordeAtivo?: boolean;
 }
 
 export interface PlaybackState {

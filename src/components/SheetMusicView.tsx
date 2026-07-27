@@ -55,8 +55,24 @@ export const SheetMusicView: React.FC<SheetMusicViewProps> = ({
   const [clefMode, setClefMode] = useState<'treble' | 'bass' | 'auto'>('auto');
   const [paperTheme, setPaperTheme] = useState<'paper' | 'dark'>('paper');
 
-  const { notas, totalBeats, totalCompassos } = generatorResult;
+  const {
+    notas,
+    totalBeats,
+    totalCompassos,
+    padraoNome,
+    padraoFormula,
+    cifraAcorde,
+    acordeNome,
+    acordeAtivo,
+  } = generatorResult;
   const safeTimeSig = generatorResult.timeSignature || '4/4';
+
+  const cifraDisplay = cifraAcorde || (acordeAtivo && acordeNome ? acordeNome : undefined);
+  const padraoDisplay = padraoNome
+    ? padraoFormula && !padraoNome.includes(padraoFormula)
+      ? `${padraoNome} (${padraoFormula})`
+      : padraoNome
+    : padraoFormula;
 
   if (!notas || notas.length === 0) {
     return (
@@ -114,7 +130,7 @@ export const SheetMusicView: React.FC<SheetMusicViewProps> = ({
   const middleLineDiatonic = activeClef === 'treble' ? 34 : 22;
   const bottomLineDiatonic = activeClef === 'treble' ? 30 : 18;
 
-  const staffPaddingTop = 50;
+  const staffPaddingTop = 65;
   const staffHeight = 4 * lineSpacing; // 40px
   const topLineY = staffPaddingTop;
   const bottomLineY = topLineY + staffHeight;
@@ -592,7 +608,7 @@ export const SheetMusicView: React.FC<SheetMusicViewProps> = ({
 
                   <svg
                     width={systemWidth}
-                    height={140}
+                    height={165}
                     className="w-full h-auto overflow-visible select-none"
                   >
                     {/* System Header: 5 Staff Lines */}
@@ -747,14 +763,42 @@ export const SheetMusicView: React.FC<SheetMusicViewProps> = ({
                                 );
                               }
                             })}
-                            {/* Measure Number */}
-                            <text
-                              x={mStartX + 6}
-                              y={topLineY - 14}
-                              className="fill-slate-500 text-[10px] font-sans font-semibold"
-                            >
-                              c.{mNum}
-                            </text>
+                            {/* Upper Staff Annotations: Compasso Number, Chord Cifra & Melodic Pattern */}
+                            <g key={`measure-header-${mNum}`}>
+                              {/* Compasso Number */}
+                              <text
+                                x={mStartX + 6}
+                                y={topLineY - 42}
+                                fill={styles.barLineColor}
+                                className="text-[10px] font-sans font-bold opacity-80 select-none"
+                              >
+                                Comp. {mNum}
+                              </text>
+
+                              {/* Cifra do Acorde */}
+                              {cifraDisplay && (
+                                <text
+                                  x={mStartX + 72}
+                                  y={topLineY - 41}
+                                  fill={paperTheme === 'dark' ? '#fbbf24' : '#1e1b4b'}
+                                  className="text-[14px] font-serif font-bold select-none tracking-wide"
+                                >
+                                  {cifraDisplay}
+                                </text>
+                              )}
+
+                              {/* Padrão Melódico */}
+                              {padraoDisplay && (
+                                <text
+                                  x={mStartX + 6}
+                                  y={topLineY - 24}
+                                  fill={paperTheme === 'dark' ? '#94a3b8' : '#475569'}
+                                  className="text-[10px] font-sans font-medium italic select-none"
+                                >
+                                  Padrão: {padraoDisplay}
+                                </text>
+                              )}
+                            </g>
 
                             {/* Measure Bar Line */}
                             <line

@@ -212,6 +212,22 @@ export function getDuracaoBeat(termo: string): number {
   return baseDur;
 }
 
+// Helper to extract a clean, standard chord symbol (cifra) from chord name
+export function obterCifraAcorde(tonica: string, acordeNome: string): string {
+  if (!acordeNome) return tonica;
+  const parts = acordeNome.split('-');
+  if (parts.length > 1) {
+    let symbolPart = parts[1].trim();
+    // Remove trailing formula like "(1,3,5)" or "(1,b3,5,b7)"
+    symbolPart = symbolPart.replace(/\s*\([\d,b#]+\)\s*$/, '').trim();
+    if (symbolPart === 'M' || symbolPart === 'maj' || symbolPart === 'Maior') {
+      return tonica;
+    }
+    return `${tonica}${symbolPart}`;
+  }
+  return tonica;
+}
+
 // Full pattern sequence builder exactly replicating Python & JS logic
 export function gerarSequenciaProgressoes(params: {
   tonica: string;
@@ -219,6 +235,10 @@ export function gerarSequenciaProgressoes(params: {
   escalaFormula: string;
   ritmoFormula: string;
   padraoFormula: string;
+  padraoNome?: string;
+  acordeNome?: string;
+  cifraAcorde?: string;
+  acordeAtivo?: boolean;
   notaInicial: string;
   direcao: DirecaoType;
   numCompassos: number;
@@ -230,6 +250,10 @@ export function gerarSequenciaProgressoes(params: {
     escalaFormula,
     ritmoFormula,
     padraoFormula,
+    padraoNome,
+    acordeNome,
+    cifraAcorde,
+    acordeAtivo,
     notaInicial,
     direcao,
     numCompassos,
@@ -386,6 +410,11 @@ export function gerarSequenciaProgressoes(params: {
     timeSignature,
     listaNotasNome,
     listaDuracoesBeats,
+    padraoNome,
+    padraoFormula,
+    acordeNome,
+    cifraAcorde,
+    acordeAtivo,
   };
 }
 

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Settings2, Plus, Minus, Trash2, ChevronDown, ChevronUp, Play, Square, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Settings2, Plus, Minus, Trash2, ChevronDown, ChevronUp, Play, Square, ArrowUpRight, ArrowDownRight, Music, Sparkles } from 'lucide-react';
 import { TONICAS } from '../utils/musicTheory';
 import { DirecaoType, TimeSignatureType } from '../types';
+import { MusicTheory } from './MusicTheory';
+import { audioEngine } from '../utils/audioEngine';
 
 interface ScaleCardProps {
   tonica: string;
@@ -17,7 +19,7 @@ interface ScaleCardProps {
   isPlaying?: boolean;
   playingType?: string | null;
 
-  // Added execution and meter controls
+  // Execution and meter controls
   notasEscalaDisponiveis?: string[];
   notaInicial?: string;
   setNotaInicial?: (val: string) => void;
@@ -27,6 +29,41 @@ interface ScaleCardProps {
   setDirecao?: (val: DirecaoType) => void;
   timeSignature?: TimeSignatureType;
   setTimeSignature?: (val: TimeSignatureType) => void;
+}
+
+function getScaleDescription(escalaNome: string, tonica: string): string {
+  const nameLower = escalaNome.toLowerCase();
+  if (nameLower.includes('jônica') || nameLower.includes('maior')) {
+    return `A escala Maior de ${tonica} possui sonoridade luminosa, equilibrada e consoante. É a base da harmonia funcional e do sistema tonal ocidental.`;
+  }
+  if (nameLower.includes('harmônica')) {
+    return `A escala Menor Harmônica de ${tonica} possui o 7º grau elevado, gerando a tensão marcante da sensível com sonoridade expressiva, neoclássica e oriental.`;
+  }
+  if (nameLower.includes('melódica')) {
+    return `A escala Menor Melódica de ${tonica} possui 3ª menor com 6ª e 7ª maiores, perfeita para condução de vozes e improvisação sobre acordes alterados.`;
+  }
+  if (nameLower.includes('eólica') || nameLower.includes('menor natural')) {
+    return `A escala Menor Natural de ${tonica} possui sonoridade melancólica, profunda e introspectiva, amplamente utilizada no rock, pop e música folclórica.`;
+  }
+  if (nameLower.includes('dórica')) {
+    return `O modo Dórico de ${tonica} é uma escala menor com 6ª maior, proporcionando um tom sofisticado e suave típico do jazz, funk e fusion.`;
+  }
+  if (nameLower.includes('frígia')) {
+    return `O modo Frígio de ${tonica} traz a tensão da 2ª menor, criando uma atmosfera obscura, dramática e exótica (comum no flamenco e metal).`;
+  }
+  if (nameLower.includes('lídia')) {
+    return `O modo Lídio de ${tonica} traz a 4ª aumentada (#4), gerando um caráter místico, etéreo e expansivo, popular em trilhas sonoras de cinema.`;
+  }
+  if (nameLower.includes('mixolídia')) {
+    return `O modo Mixolídio de ${tonica} é a escala maior com 7ª menor (7b), fundamental no blues, rock clássico e música nordestina brasileira.`;
+  }
+  if (nameLower.includes('blues')) {
+    return `A escala de Blues de ${tonica} adiciona a 'Blue Note' (5ª diminuta) à pentatônica menor, essencial para solos expressivos e cheios de alma.`;
+  }
+  if (nameLower.includes('pentatônica')) {
+    return `A escala Pentatônica de ${tonica} é composta por 5 notas sem intervalos de semitom, extremamente versátil e melodiosa em qualquer estilo.`;
+  }
+  return `Escala de ${tonica} com sonoridade singular configurada pela fórmula de intervalos selecionada.`;
 }
 
 export const ScaleCard: React.FC<ScaleCardProps> = ({
@@ -55,6 +92,7 @@ export const ScaleCard: React.FC<ScaleCardProps> = ({
   const [isOpenPanel, setIsOpenPanel] = useState(false);
   const [inputNome, setInputNome] = useState(escalaNome);
   const [inputFormula, setInputFormula] = useState(escalasDict[escalaNome] || '');
+  const [activeBadgeNote, setActiveBadgeNote] = useState<string | null>(null);
 
   const isScalePlaying = isPlaying && playingType === 'escala';
 
@@ -79,9 +117,20 @@ export const ScaleCard: React.FC<ScaleCardProps> = ({
     setIsOpenPanel(false);
   };
 
+  const handleNoteBadgeClick = (noteStr: string) => {
+    setActiveBadgeNote(noteStr);
+    audioEngine.playSingleNote(noteStr);
+    setTimeout(() => {
+      setActiveBadgeNote(null);
+    }, 400);
+  };
+
+  const scaleDescription = getScaleDescription(escalaNome, tonica);
+
   return (
-    <div className="bg-slate-900/70 backdrop-blur border border-slate-800 rounded-2xl p-5 shadow-xl">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-slate-900/70 backdrop-blur border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+      {/* Top Header */}
+      <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold tracking-wider text-sky-400 uppercase flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-sky-400"></span>
           Escala & Tônica Base
@@ -101,8 +150,75 @@ export const ScaleCard: React.FC<ScaleCardProps> = ({
         </button>
       </div>
 
+      {/* Title & Description of Current Scale */}
+      <div className="bg-slate-950/80 border border-sky-500/20 rounded-xl p-3.5 space-y-1.5">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-sky-400 shrink-0" />
+            <h3 className="text-base font-bold text-slate-100 tracking-wide">
+              Escala de <span className="text-sky-400">{tonica}</span> {escalaNome}
+            </h3>
+          </div>
+          <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-sky-950/80 text-sky-300 border border-sky-800/50">
+            Fórmula: {escalasDict[escalaNome]}
+          </span>
+        </div>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          {scaleDescription}
+        </p>
+      </div>
+
+      {/* Note Badges Section */}
+      {notasEscalaDisponiveis.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span className="font-medium text-slate-300 flex items-center gap-1.5">
+              <Music className="w-3.5 h-3.5 text-sky-400" />
+              Notas da Escala (Clique para ouvir):
+            </span>
+            <span className="text-[10px] text-slate-500">Oitava Base {oitavaBase}</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            {notasEscalaDisponiveis.map((n, idx) => {
+              const isActive = activeBadgeNote === n;
+              return (
+                <button
+                  key={`note-badge-${n}-${idx}`}
+                  onClick={() => handleNoteBadgeClick(n)}
+                  className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all duration-150 flex items-center gap-1.5 border shadow-sm ${
+                    isActive
+                      ? 'bg-sky-500 text-white border-sky-300 scale-105 ring-2 ring-sky-400/50'
+                      : 'bg-slate-950 hover:bg-slate-800 text-sky-300 border-slate-800 hover:border-sky-500/50 active:scale-95'
+                  }`}
+                  title={`Tocar nota ${n}`}
+                >
+                  <span className="text-[10px] text-slate-400 font-sans font-normal border-r border-slate-700/80 pr-1.5">
+                    {idx + 1}º
+                  </span>
+                  <span>{n}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* MusicTheory VexFlow Component embedded directly below notes */}
+      {notasEscalaDisponiveis.length > 0 && (
+        <MusicTheory
+          notes={notasEscalaDisponiveis}
+          title={`Pauta Interativa (${tonica} ${escalaNome})`}
+          clef="treble"
+          interactive={true}
+          onNoteClick={(note) => {
+            handleNoteBadgeClick(note);
+          }}
+        />
+      )}
+
       {/* Row 1: Tonica, Scale, Base Octave */}
-      <div className="grid grid-cols-12 gap-3 mb-3">
+      <div className="grid grid-cols-12 gap-3 pt-2">
         <div className="col-span-5 sm:col-span-3">
           <label className="block text-xs font-medium text-slate-400 mb-1">Tônica Principal</label>
           <select
@@ -168,7 +284,7 @@ export const ScaleCard: React.FC<ScaleCardProps> = ({
       </div>
 
       {/* Row 2: Starting Note, Custom Note & Direction */}
-      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
         {/* Starting Note Dropdown */}
         <div className="sm:col-span-4">
           <label className="block text-xs font-medium text-slate-400 mb-1">
@@ -233,8 +349,8 @@ export const ScaleCard: React.FC<ScaleCardProps> = ({
         </div>
       </div>
 
-      {/* Footer / Bottom Section: Playback Button (left) & Current Formula (right) */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mt-3 pt-3 border-t border-slate-800/80">
+      {/* Footer / Bottom Section: Playback Button */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-3 border-t border-slate-800/80">
         {onPlayScale && (
           <button
             type="button"
@@ -261,7 +377,7 @@ export const ScaleCard: React.FC<ScaleCardProps> = ({
 
         <div className="text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 w-full sm:flex-1 flex items-center justify-between sm:justify-start gap-2">
           <span>
-            Fórmula Atual ({escalaNome}):{' '}
+            Fórmula Selecionada:{' '}
             <strong className="text-sky-300 font-mono">{escalasDict[escalaNome]}</strong>
           </span>
         </div>
@@ -269,7 +385,7 @@ export const ScaleCard: React.FC<ScaleCardProps> = ({
 
       {/* Collapsible Panel for Custom Scales */}
       {isOpenPanel && (
-        <div className="mt-4 p-4 bg-slate-950 border border-sky-500/30 rounded-xl space-y-3 animate-fadeIn">
+        <div className="p-4 bg-slate-950 border border-sky-500/30 rounded-xl space-y-3 animate-fadeIn">
           <div className="text-xs font-semibold text-sky-400 flex items-center justify-between">
             <span>Editor de Escalas Personalizadas:</span>
           </div>

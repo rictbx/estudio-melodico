@@ -7,7 +7,7 @@ interface HeaderProps {
   waveform: WaveformType;
   setWaveform: (val: WaveformType) => void;
   onOpenExportModal: () => void;
-  onOpenGitHubModal: () => void;
+  onOpenGitHubModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,6 +16,10 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenExportModal,
   onOpenGitHubModal,
 }) => {
+  const isDev = Boolean(
+    import.meta.env.DEV || (typeof window !== 'undefined' && window.location.search.includes('dev=true'))
+  );
+
   return (
     <header className="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-30 px-4 py-3 sm:px-6">
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -72,13 +76,15 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Exportar HTML</span>
           </button>
 
-          <button
-            onClick={onOpenGitHubModal}
-            className="px-3 py-1.5 text-xs font-medium bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 rounded-lg border border-indigo-500/40 transition flex items-center gap-1.5"
-            title="Publicar no GitHub Pages"
-          >
-            <span>🚀 GitHub</span>
-          </button>
+          {isDev && onOpenGitHubModal && (
+            <button
+              onClick={onOpenGitHubModal}
+              className="px-3 py-1.5 text-xs font-medium bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 rounded-lg border border-indigo-500/40 transition flex items-center gap-1.5"
+              title="Publicar no GitHub Pages (Dev)"
+            >
+              <span>🚀 GitHub</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

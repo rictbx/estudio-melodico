@@ -1,5 +1,5 @@
 import { SequenceNote, WaveformType } from '../types';
-import { getDuracaoBeat } from './musicTheory';
+import { getDuracaoBeat, getNotePitchInfo } from './musicTheory';
 
 export interface ChordAccompanimentConfig {
   enabled: boolean;
@@ -273,6 +273,28 @@ class AudioEngine {
       this.stop();
       if (onComplete) onComplete();
     }, (totalDurSec + 0.15) * 1000);
+  }
+
+  public playSingleNote(pitch: string, durationSec: number = 0.5, waveform: WaveformType = 'triangle') {
+    this.initContext();
+    if (!this.ctx) return;
+
+    const info = getNotePitchInfo(pitch);
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = waveform;
+    osc.frequency.value = info.freq;
+
+    const now = this.ctx.currentTime;
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + durationSec);
   }
 }
 

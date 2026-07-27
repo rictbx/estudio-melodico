@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { RefreshCw } from 'lucide-react';
 import { Header } from './components/Header';
 import { ScaleCard } from './components/ScaleCard';
 import { RhythmCard } from './components/RhythmCard';
@@ -18,6 +17,7 @@ import {
   DEFAULT_ACORDES,
   obterNotasEscala,
   obterNotasAcorde,
+  obterCifraAcorde,
   gerarSequenciaProgressoes,
   getNotePitchInfo,
   baixarMidiFile,
@@ -124,6 +124,7 @@ export default function App() {
     const ritmoFormula = ritmosDict[ritmoNome] || 'colcheia';
 
     const notaAlvo = notaInicialCustom.trim() ? notaInicialCustom.trim() : notaInicial;
+    const cifra = acordeAtivo ? obterCifraAcorde(acordeTonica, acordeNome) : undefined;
 
     return gerarSequenciaProgressoes({
       tonica,
@@ -131,6 +132,10 @@ export default function App() {
       escalaFormula,
       ritmoFormula,
       padraoFormula,
+      padraoNome,
+      acordeNome,
+      cifraAcorde: cifra,
+      acordeAtivo,
       notaInicial: notaAlvo,
       direcao,
       numCompassos,
@@ -144,6 +149,10 @@ export default function App() {
     ritmoNome,
     ritmosDict,
     padraoFormula,
+    padraoNome,
+    acordeNome,
+    acordeTonica,
+    acordeAtivo,
     notaInicial,
     notaInicialCustom,
     direcao,
@@ -451,9 +460,9 @@ export default function App() {
 
       {/* Dynamic Build Status & Version Stamp Footer */}
       <footer className="mt-8 py-6 px-4 border-t border-slate-800/80 bg-slate-950/80 text-center text-xs text-slate-400">
-        <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3">
           {/* Version Badge & Status Indicator */}
-          <div className="flex items-center gap-2.5 flex-wrap justify-center sm:justify-start w-full">
+          <div className="flex items-center gap-2.5 flex-wrap justify-center w-full">
             <div className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 shadow-inner">
               <span className="relative flex h-2.5 w-2.5 items-center justify-center shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -467,20 +476,6 @@ export default function App() {
                 {formattedUpdateTimestamp}
               </span>
             </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.reload();
-              }}
-              className="inline-flex items-center justify-center gap-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 hover:text-indigo-200 border border-indigo-500/30 rounded-xl px-3 py-1.5 text-xs font-semibold transition active:scale-95 touch-manipulation cursor-pointer shadow-sm"
-              title="Limpa o cache local e recarrega a aplicação"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Recarregar Versão</span>
-            </button>
           </div>
         </div>
       </footer>
@@ -496,15 +491,17 @@ export default function App() {
         currentConfig={currentProgressionConfig}
       />
 
-      <GitHubPublishModal
-        isOpen={isGitHubModalOpen}
-        onClose={() => setIsGitHubModalOpen(false)}
-        escalasDict={escalasDict}
-        ritmosDict={ritmosDict}
-        padroesDict={padroesDict}
-        acordesDict={acordesDict}
-        currentConfig={currentProgressionConfig}
-      />
+      {(import.meta.env.DEV || (typeof window !== 'undefined' && window.location.search.includes('dev=true'))) && (
+        <GitHubPublishModal
+          isOpen={isGitHubModalOpen}
+          onClose={() => setIsGitHubModalOpen(false)}
+          escalasDict={escalasDict}
+          ritmosDict={ritmosDict}
+          padroesDict={padroesDict}
+          acordesDict={acordesDict}
+          currentConfig={currentProgressionConfig}
+        />
+      )}
     </div>
   );
 }
