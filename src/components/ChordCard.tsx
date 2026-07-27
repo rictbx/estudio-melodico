@@ -136,8 +136,64 @@ export const ChordCard: React.FC<ChordCardProps> = ({
         </h2>
       </div>
 
-      {/* Row 1: Accompaniment Toggle, Octave, and Accompaniment Rhythm */}
+      {/* Row 1: Chord Root & Chord Type / Tensions directly side-by-side */}
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-3">
+        {/* Chord Root Tonality */}
+        <div className="sm:col-span-4">
+          <label className="block text-xs font-medium text-slate-400 mb-1">Tônica do Acorde</label>
+          <select
+            value={acordeTonica}
+            onChange={(e) => setAcordeTonica(e.target.value)}
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 font-medium focus:outline-none focus:border-amber-500 transition cursor-pointer"
+          >
+            {TONICAS.map((t) => (
+              <option key={t} value={t} className="bg-slate-900 text-slate-100">
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Chord Structure/Tensions Selector */}
+        <div className="sm:col-span-8">
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-medium text-slate-400">
+              Tipo de Acorde / Tensões
+            </label>
+            <button
+              type="button"
+              onClick={toggleChordPanel}
+              className={`px-2 py-0.5 rounded text-[11px] font-medium border transition flex items-center gap-1 ${
+                activePanel === 'acorde'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+              }`}
+            >
+              <Settings2 className="w-3 h-3" />
+              <span>Opções de Acorde</span>
+              {activePanel === 'acorde' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          </div>
+          <select
+            value={acordeNome}
+            onChange={(e) => {
+              setAcordeNome(e.target.value);
+              setInputChordNome(e.target.value);
+              setInputChordFormula(acordesDict[e.target.value] || '');
+            }}
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 font-medium focus:outline-none focus:border-amber-500 transition cursor-pointer truncate"
+          >
+            {Object.keys(acordesDict).map((nome) => (
+              <option key={nome} value={nome} className="bg-slate-900 text-slate-100">
+                {nome}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Row 2: Accompaniment Toggle, Octave, and Accompaniment Rhythm */}
+      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-4">
         {/* Toggle Harmonic Accompaniment */}
         <div className="sm:col-span-4 flex flex-col justify-between p-2.5 bg-slate-950/80 border border-slate-800 rounded-xl min-h-[66px]">
           <span className="text-xs font-medium text-slate-400">Ativar Acompanhamento</span>
@@ -215,62 +271,6 @@ export const ChordCard: React.FC<ChordCardProps> = ({
             className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 font-medium focus:outline-none focus:border-amber-500 transition cursor-pointer truncate"
           >
             {Object.keys(ritmosDict).map((nome) => (
-              <option key={nome} value={nome} className="bg-slate-900 text-slate-100">
-                {nome}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Row 2: Chord Root & Chord Type / Tensions directly side-by-side */}
-      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-4">
-        {/* Chord Root Tonality */}
-        <div className="sm:col-span-4">
-          <label className="block text-xs font-medium text-slate-400 mb-1">Tônica do Acorde</label>
-          <select
-            value={acordeTonica}
-            onChange={(e) => setAcordeTonica(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 font-medium focus:outline-none focus:border-amber-500 transition cursor-pointer"
-          >
-            {TONICAS.map((t) => (
-              <option key={t} value={t} className="bg-slate-900 text-slate-100">
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Chord Structure/Tensions Selector */}
-        <div className="sm:col-span-8">
-          <div className="flex items-center justify-between mb-1">
-            <label className="block text-xs font-medium text-slate-400">
-              Tipo de Acorde / Tensões
-            </label>
-            <button
-              type="button"
-              onClick={toggleChordPanel}
-              className={`px-2 py-0.5 rounded text-[11px] font-medium border transition flex items-center gap-1 ${
-                activePanel === 'acorde'
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-              }`}
-            >
-              <Settings2 className="w-3 h-3" />
-              <span>Opções de Acorde</span>
-              {activePanel === 'acorde' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </button>
-          </div>
-          <select
-            value={acordeNome}
-            onChange={(e) => {
-              setAcordeNome(e.target.value);
-              setInputChordNome(e.target.value);
-              setInputChordFormula(acordesDict[e.target.value] || '');
-            }}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 font-medium focus:outline-none focus:border-amber-500 transition cursor-pointer truncate"
-          >
-            {Object.keys(acordesDict).map((nome) => (
               <option key={nome} value={nome} className="bg-slate-900 text-slate-100">
                 {nome}
               </option>

@@ -160,7 +160,7 @@ export const RhythmCard: React.FC<RhythmCardProps> = ({
         </select>
       </div>
 
-      {/* Grouped Row: Fórmula de Compasso, BPM Stepper, and Número de Compassos Stepper */}
+      {/* Grouped Row: Fórmula de Compasso, Número de Compassos Stepper, and BPM Stepper */}
       <div className="grid grid-cols-12 gap-3 mb-4">
         {/* Fórmula de Compasso */}
         <div className="col-span-12 sm:col-span-4">
@@ -176,38 +176,6 @@ export const RhythmCard: React.FC<RhythmCardProps> = ({
             <option value="3/4" className="bg-slate-900 text-slate-100">3/4 (Ternário)</option>
             <option value="6/8" className="bg-slate-900 text-slate-100">6/8 (Composto)</option>
           </select>
-        </div>
-
-        {/* BPM Stepper */}
-        <div className="col-span-6 sm:col-span-4">
-          <label className="block text-xs font-medium text-slate-400 mb-1 flex items-center gap-1">
-            <Activity className="w-3.5 h-3.5 text-emerald-400" /> BPM (Andamento)
-          </label>
-          <div className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl p-1 min-h-[46px]">
-            <button
-              type="button"
-              onClick={() => setBpm?.(Math.max(40, bpm - 1))}
-              disabled={bpm <= 40}
-              className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800/80 disabled:opacity-30 disabled:pointer-events-none transition active:scale-95 shrink-0"
-              aria-label="Diminuir BPM"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-            <div className="flex-1 text-center px-1">
-              <span className="text-base font-bold font-mono text-emerald-300">
-                {bpm}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setBpm?.(Math.min(240, bpm + 1))}
-              disabled={bpm >= 240}
-              className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800/80 disabled:opacity-30 disabled:pointer-events-none transition active:scale-95 shrink-0"
-              aria-label="Aumentar BPM"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
         </div>
 
         {/* Compassos Stepper */}
@@ -236,6 +204,38 @@ export const RhythmCard: React.FC<RhythmCardProps> = ({
               disabled={numCompassos >= 16}
               className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800/80 disabled:opacity-30 disabled:pointer-events-none transition active:scale-95 shrink-0"
               aria-label="Aumentar Compassos"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* BPM Stepper */}
+        <div className="col-span-6 sm:col-span-4">
+          <label className="block text-xs font-medium text-slate-400 mb-1 flex items-center gap-1">
+            <Activity className="w-3.5 h-3.5 text-emerald-400" /> BPM (Andamento)
+          </label>
+          <div className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl p-1 min-h-[46px]">
+            <button
+              type="button"
+              onClick={() => setBpm?.(Math.max(40, bpm - 1))}
+              disabled={bpm <= 40}
+              className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800/80 disabled:opacity-30 disabled:pointer-events-none transition active:scale-95 shrink-0"
+              aria-label="Diminuir BPM"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            <div className="flex-1 text-center px-1">
+              <span className="text-base font-bold font-mono text-emerald-300">
+                {bpm}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBpm?.(Math.min(240, bpm + 1))}
+              disabled={bpm >= 240}
+              className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800/80 disabled:opacity-30 disabled:pointer-events-none transition active:scale-95 shrink-0"
+              aria-label="Aumentar BPM"
             >
               <Plus className="w-4 h-4" />
             </button>

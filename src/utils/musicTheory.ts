@@ -323,15 +323,22 @@ export function gerarSequenciaProgressoes(params: {
 
   while (tempoAcumulado < totalTargetBeats && passoIdx < 1000) {
     const baseIdx = isDesc ? startIndex - passoIdx : startIndex + passoIdx;
+    let outOfBounds = false;
 
     for (const p of padraoProcessado) {
       if (tempoAcumulado >= totalTargetBeats) break;
 
       const idxFinal = isDesc ? baseIdx - p.degree : baseIdx + p.degree;
-      const validIdx = Math.max(0, Math.min(escalaExtendida.length - 1, idxFinal));
+      if (idxFinal < 0 || idxFinal >= escalaExtendida.length) {
+        outOfBounds = true;
+        break;
+      }
 
-      let midiFinal = escalaExtendida[validIdx].midi + p.mod;
-      midiFinal = Math.max(21, Math.min(108, midiFinal));
+      const midiFinal = escalaExtendida[idxFinal].midi + p.mod;
+      if (midiFinal < 21 || midiFinal > 108) {
+        outOfBounds = true;
+        break;
+      }
 
       const oct = Math.floor(midiFinal / 12) - 1;
       const nIdx = (midiFinal % 12 + 12) % 12;
@@ -367,6 +374,8 @@ export function gerarSequenciaProgressoes(params: {
       tempoAcumulado += durBeats;
       contadorNota++;
     }
+
+    if (outOfBounds) break;
     passoIdx++;
   }
 

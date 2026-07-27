@@ -14,6 +14,9 @@ interface NoteRenderInfo {
   noteX: number;
   noteY: number;
   diatonicStep: number;
+  visualDiatonicStep: number;
+  octaveShift: number;
+  ottavaText: '8va' | '8vb' | '15ma' | '15mb' | null;
   letter: string;
   accidental: string;
   octave: number;
@@ -25,6 +28,14 @@ interface NoteRenderInfo {
   isWholeNote: boolean;
   isBeamable: boolean;
   ledgerLines: number[];
+}
+
+interface OttavaSpan {
+  ottavaText: '8va' | '8vb' | '15ma' | '15mb';
+  octaveShift: number;
+  startX: number;
+  endX: number;
+  notes: NoteRenderInfo[];
 }
 
 interface BeamGroup {
@@ -119,6 +130,24 @@ export const SheetMusicView: React.FC<SheetMusicViewProps> = ({
   const headerWidth = 65;
   const systemWidth = headerWidth + measuresPerSystem * measureWidth + 20;
 
+  const getRequiredOttava = (
+    diatonicStep: number
+  ): { octaveShift: number; ottavaText: '8va' | '8vb' | '15ma' | '15mb' | null } => {
+    if (diatonicStep >= topLineDiatonic + 2) {
+      if (diatonicStep >= topLineDiatonic + 11) {
+        return { octaveShift: -2, ottavaText: '15ma' };
+      }
+      return { octaveShift: -1, ottavaText: '8va' };
+    }
+    if (diatonicStep <= bottomLineDiatonic - 3) {
+      if (diatonicStep <= bottomLineDiatonic - 11) {
+        return { octaveShift: 2, ottavaText: '15mb' };
+      }
+      return { octaveShift: 1, ottavaText: '8vb' };
+    }
+    return { octaveShift: 0, ottavaText: null };
+  };
+
   // Function to process notes and calculate beams for a measure
   const processMeasureNotes = (
     mNum: number,
@@ -127,53 +156,193 @@ export const SheetMusicView: React.FC<SheetMusicViewProps> = ({
   ) => {
     const rawNotes = measuresMap.get(mNum) || [];
 
-    const noteInfos: NoteRenderInfo[] = rawNotes.map((n) => {
+    // Parse initial pitch and positions for notes in this measure
+    const parsedNotes = rawNotes.map((n) => {
       const globalIndex = notas.findIndex((x) => x.id === n.id);
       const beatOffsetInMeasure = n.startTimeBeats % beatsInMeasure;
       const noteX =
         mStartX + 28 + (beatOffsetInMeasure / beatsInMeasure) * (measureWidth - 50);
 
       const { letter, accidental, octave, diatonicStep } = parsePitchInfo(n.pitch);
-      const noteY = getYForDiatonicStep(diatonicStep);
-
-      const stemUp = diatonicStep < middleLineDiatonic;
-      const stemX = stemUp ? noteX + 4.5 : noteX - 4.5;
 
       const isWholeNote = n.durationBeats >= 4;
       const isHalfNote = n.durationBeats >= 2 && n.durationBeats < 4;
       const isFilled = n.durationBeats < 2;
       const isBeamable = n.durationBeats <= 0.75; // 8th, 16th, triplets
 
-      const ledgerLines: number[] = [];
-      if (diatonicStep < bottomLineDiatonic) {
-        for (let step = bottomLineDiatonic - 2; step >= diatonicStep; step -= 2) {
-          ledgerLines.push(getYForDiatonicStep(step));
-        }
-      } else if (diatonicStep > topLineDiatonic) {
-        for (let step = topLineDiatonic + 2; step <= diatonicStep; step += 2) {
-          ledgerLines.push(getYForDiatonicStep(step));
-        }
-      }
-
       return {
         note: n,
         globalIndex,
         noteX,
-        noteY,
         diatonicStep,
         letter,
         accidental,
         octave,
         beatInMeasure: beatOffsetInMeasure,
-        stemX,
-        stemUp,
         isFilled,
         isHalfNote,
         isWholeNote,
         isBeamable,
-        ledgerLines,
       };
     });
+
+    // Partition measure notes into structural groups (beam groups or single notes)
+    // Rule: octave shifts MUST NOT occur mid-group.
+    const noteGroups: (typeof parsedNotes)[] = [];
+    let currentBuildingGroup: typeof parsedNotes = [];
+
+    for (let i = 0; i < parsedNotes.length; i++) {
+      const item = parsedNotes[i];
+      if (!item.isBeamable) {
+        if (currentBuildingGroup.length > 0) {
+          noteGroups.push(currentBuildingGroup);
+          currentBuildingGroup = [];
+        }
+        noteGroups.push([item]);
+      } else {
+        if (currentBuildingGroup.length === 0) {
+          currentBuildingGroup.push(item);
+        } else {
+          const prevItem = currentBuildingGroup[currentBuildingGroup.length - 1];
+          const prevBeatBucket = Math.floor(prevItem.beatInMeasure);
+          const currBeatBucket = Math.floor(item.beatInMeasure);
+
+          if (prevBeatBucket === currBeatBucket || currentBuildingGroup.length < 2) {
+            currentBuildingGroup.push(item);
+          } else {
+            noteGroups.push(currentBuildingGroup);
+            currentBuildingGroup = [item];
+          }
+        }
+      }
+    }
+    if (currentBuildingGroup.length > 0) {
+      noteGroups.push(currentBuildingGroup);
+    }
+
+    // Assign uniform octave shift per group
+    let activeShift = 0;
+    let activeText: '8va' | '8vb' | '15ma' | '15mb' | null = null;
+
+    const noteInfos: NoteRenderInfo[] = [];
+
+    noteGroups.forEach((group) => {
+      let groupShift = activeShift;
+      let groupText = activeText;
+
+      const reqs = group.map((item) => getRequiredOttava(item.diatonicStep));
+
+      if (activeShift === 0) {
+        const firstReq = reqs[0];
+        if (firstReq.octaveShift !== 0) {
+          // Group starts with note requiring shift -> adopt immediately at group boundary
+          groupShift = firstReq.octaveShift;
+          groupText = firstReq.ottavaText;
+          activeShift = groupShift;
+          activeText = groupText;
+        } else {
+          // First note is normal. Keep group shift at 0 so no mid-group shift occurs.
+          groupShift = 0;
+          groupText = null;
+          // Check if any note inside group crossed threshold to trigger shift for NEXT group
+          const lateReq = reqs.find((r) => r.octaveShift !== 0);
+          if (lateReq) {
+            activeShift = lateReq.octaveShift;
+            activeText = lateReq.ottavaText;
+          } else {
+            activeShift = 0;
+            activeText = null;
+          }
+        }
+      } else {
+        // Currently in 8va/8vb. Check if group still contains notes needing shift
+        const matchingReq = reqs.find((r) => r.octaveShift !== 0);
+        if (matchingReq) {
+          groupShift = activeShift;
+          groupText = activeText;
+        } else {
+          // Group notes returned to standard range -> exit 8va/8vb at start of this group
+          groupShift = 0;
+          groupText = null;
+          activeShift = 0;
+          activeText = null;
+        }
+      }
+
+      // Build NoteRenderInfo for each note in group
+      group.forEach((item) => {
+        const visualDiatonicStep = item.diatonicStep + groupShift * 7;
+        const noteY = getYForDiatonicStep(visualDiatonicStep);
+
+        const stemUp = visualDiatonicStep < middleLineDiatonic;
+        const stemX = stemUp ? item.noteX + 4.5 : item.noteX - 4.5;
+
+        const ledgerLines: number[] = [];
+        if (visualDiatonicStep < bottomLineDiatonic) {
+          for (let step = bottomLineDiatonic - 2; step >= visualDiatonicStep; step -= 2) {
+            ledgerLines.push(getYForDiatonicStep(step));
+          }
+        } else if (visualDiatonicStep > topLineDiatonic) {
+          for (let step = topLineDiatonic + 2; step <= visualDiatonicStep; step += 2) {
+            ledgerLines.push(getYForDiatonicStep(step));
+          }
+        }
+
+        noteInfos.push({
+          note: item.note,
+          globalIndex: item.globalIndex,
+          noteX: item.noteX,
+          noteY,
+          diatonicStep: item.diatonicStep,
+          visualDiatonicStep,
+          octaveShift: groupShift,
+          ottavaText: groupText,
+          letter: item.letter,
+          accidental: item.accidental,
+          octave: item.octave,
+          beatInMeasure: item.beatInMeasure,
+          stemX,
+          stemUp,
+          isFilled: item.isFilled,
+          isHalfNote: item.isHalfNote,
+          isWholeNote: item.isWholeNote,
+          isBeamable: item.isBeamable,
+          ledgerLines,
+        });
+      });
+    });
+
+    // Collect continuous ottava spans for this measure
+    const ottavaSpans: OttavaSpan[] = [];
+    let currentSpan: OttavaSpan | null = null;
+
+    noteInfos.forEach((info) => {
+      if (info.ottavaText && info.octaveShift !== 0) {
+        if (currentSpan && currentSpan.ottavaText === info.ottavaText) {
+          currentSpan.endX = info.noteX + 10;
+          currentSpan.notes.push(info);
+        } else {
+          if (currentSpan) {
+            ottavaSpans.push(currentSpan);
+          }
+          currentSpan = {
+            ottavaText: info.ottavaText,
+            octaveShift: info.octaveShift,
+            startX: info.noteX - 10,
+            endX: info.noteX + 10,
+            notes: [info],
+          };
+        }
+      } else {
+        if (currentSpan) {
+          ottavaSpans.push(currentSpan);
+          currentSpan = null;
+        }
+      }
+    });
+    if (currentSpan) {
+      ottavaSpans.push(currentSpan);
+    }
 
     // Group beamable notes into Beam Groups
     const beamGroups: BeamGroup[] = [];
@@ -193,9 +362,9 @@ export const SheetMusicView: React.FC<SheetMusicViewProps> = ({
         });
       } else {
         // Multi-note beam group
-        // Common stem direction: majority or average
+        // Common stem direction based on visualDiatonicStep
         const avgStep =
-          groupNotes.reduce((sum, item) => sum + item.diatonicStep, 0) /
+          groupNotes.reduce((sum, item) => sum + item.visualDiatonicStep, 0) /
           groupNotes.length;
         const stemUp = avgStep < middleLineDiatonic;
 
@@ -267,7 +436,7 @@ export const SheetMusicView: React.FC<SheetMusicViewProps> = ({
     }
     finalizeGroup(currentGroupNotes);
 
-    return { noteInfos, beamGroups };
+    return { noteInfos, beamGroups, ottavaSpans };
   };
 
   const handlePrint = () => {
@@ -495,7 +664,7 @@ export const SheetMusicView: React.FC<SheetMusicViewProps> = ({
                             ? 3.0
                             : parseInt(safeTimeSig.split('/')[0] || '4', 10);
 
-                        const { noteInfos, beamGroups } = processMeasureNotes(
+                        const { noteInfos, beamGroups, ottavaSpans } = processMeasureNotes(
                           mNum,
                           mStartX,
                           beatsInMeasure
@@ -503,6 +672,81 @@ export const SheetMusicView: React.FC<SheetMusicViewProps> = ({
 
                         return (
                           <g key={`measure-${mNum}`}>
+                            {/* Render Ottava Brackets (8va / 8vb / 15ma / 15mb) */}
+                            {ottavaSpans.map((span, sIdx) => {
+                              const isAbove = span.octaveShift < 0;
+                              if (isAbove) {
+                                const minNoteY = Math.min(...span.notes.map((n) => n.noteY));
+                                const ottavaY = Math.min(topLineY - 18, minNoteY - 18);
+                                return (
+                                  <g key={`ottava-${mNum}-${sIdx}`}>
+                                    <text
+                                      x={span.startX}
+                                      y={ottavaY + 4}
+                                      fill={styles.noteStemColor}
+                                      fontSize="11"
+                                      fontWeight="bold"
+                                      fontStyle="italic"
+                                      className="font-serif select-none"
+                                    >
+                                      {span.ottavaText}
+                                    </text>
+                                    <line
+                                      x1={span.startX + span.ottavaText.length * 7 + 4}
+                                      y1={ottavaY}
+                                      x2={span.endX}
+                                      y2={ottavaY}
+                                      stroke={styles.noteStemColor}
+                                      strokeWidth="1.2"
+                                      strokeDasharray="3 3"
+                                    />
+                                    <line
+                                      x1={span.endX}
+                                      y1={ottavaY}
+                                      x2={span.endX}
+                                      y2={ottavaY + 6}
+                                      stroke={styles.noteStemColor}
+                                      strokeWidth="1.2"
+                                    />
+                                  </g>
+                                );
+                              } else {
+                                const maxNoteY = Math.max(...span.notes.map((n) => n.noteY));
+                                const ottavaY = Math.max(bottomLineY + 22, maxNoteY + 18);
+                                return (
+                                  <g key={`ottava-${mNum}-${sIdx}`}>
+                                    <text
+                                      x={span.startX}
+                                      y={ottavaY + 3}
+                                      fill={styles.noteStemColor}
+                                      fontSize="11"
+                                      fontWeight="bold"
+                                      fontStyle="italic"
+                                      className="font-serif select-none"
+                                    >
+                                      {span.ottavaText}
+                                    </text>
+                                    <line
+                                      x1={span.startX + span.ottavaText.length * 7 + 4}
+                                      y1={ottavaY}
+                                      x2={span.endX}
+                                      y2={ottavaY}
+                                      stroke={styles.noteStemColor}
+                                      strokeWidth="1.2"
+                                      strokeDasharray="3 3"
+                                    />
+                                    <line
+                                      x1={span.endX}
+                                      y1={ottavaY}
+                                      x2={span.endX}
+                                      y2={ottavaY - 6}
+                                      stroke={styles.noteStemColor}
+                                      strokeWidth="1.2"
+                                    />
+                                  </g>
+                                );
+                              }
+                            })}
                             {/* Measure Number */}
                             <text
                               x={mStartX + 6}
@@ -759,7 +1003,7 @@ export const SheetMusicView: React.FC<SheetMusicViewProps> = ({
       <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/70 p-3 rounded-xl border border-slate-800 print:hidden">
         <Info className="w-4 h-4 text-sky-400 shrink-0" />
         <span>
-          A partitura agora agrupa automaticamente as astes das colcheias/semicolcheias em barras de ligação (beams). Clique no botão <strong>Imprimir Partitura</strong> para exportar em PDF ou papel.
+          A partitura aplica automaticamente a notação <strong>8va / 8vb</strong> para desenhar notas agudas ou graves no centro da pauta (evitando excesso de linhas suplementares). A transposição é exclusivamente visual — o áudio, MIDI e teclado mantêm as oitavas reais.
         </span>
       </div>
     </div>

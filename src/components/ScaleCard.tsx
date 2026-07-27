@@ -167,10 +167,10 @@ export const ScaleCard: React.FC<ScaleCardProps> = ({
         </div>
       </div>
 
-      {/* Row 2: Starting Note, Custom Note, Direction & Time Signature */}
+      {/* Row 2: Starting Note, Custom Note & Direction */}
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-4">
         {/* Starting Note Dropdown */}
-        <div className="sm:col-span-3">
+        <div className="sm:col-span-4">
           <label className="block text-xs font-medium text-slate-400 mb-1">
             Nota Inicial (Escala)
           </label>
@@ -188,7 +188,7 @@ export const ScaleCard: React.FC<ScaleCardProps> = ({
         </div>
 
         {/* Custom Note Override */}
-        <div className="sm:col-span-3">
+        <div className="sm:col-span-4">
           <label className="block text-xs font-medium text-slate-400 mb-1">
             Personalizada (Opcional)
           </label>
@@ -202,7 +202,7 @@ export const ScaleCard: React.FC<ScaleCardProps> = ({
         </div>
 
         {/* Direction */}
-        <div className="sm:col-span-3">
+        <div className="sm:col-span-4">
           <label className="block text-xs font-medium text-slate-400 mb-1">Direção</label>
           <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 min-h-[42px] items-center">
             <button
@@ -231,37 +231,15 @@ export const ScaleCard: React.FC<ScaleCardProps> = ({
             </button>
           </div>
         </div>
-
-        {/* Time Signature */}
-        <div className="sm:col-span-3">
-          <label className="block text-xs font-medium text-slate-400 mb-1">Fórmula de Compasso</label>
-          <select
-            value={timeSignature}
-            onChange={(e) => setTimeSignature?.(e.target.value as TimeSignatureType)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 font-medium focus:outline-none focus:border-sky-500 transition cursor-pointer"
-          >
-            <option value="4/4">4/4 (Quaternário)</option>
-            <option value="3/4">3/4 (Ternário)</option>
-            <option value="6/8">6/8 (Composto)</option>
-          </select>
-        </div>
       </div>
 
-      {/* Current Formula Badge */}
-      <div className="text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 flex items-center justify-between">
-        <span>
-          Fórmula Atual ({escalaNome}):{' '}
-          <strong className="text-sky-300 font-mono">{escalasDict[escalaNome]}</strong>
-        </span>
-      </div>
-
-      {/* Audio Playback Button directly at the bottom */}
-      {onPlayScale && (
-        <div className="mt-3 pt-3 border-t border-slate-800/80">
+      {/* Footer / Bottom Section: Playback Button (left) & Current Formula (right) */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mt-3 pt-3 border-t border-slate-800/80">
+        {onPlayScale && (
           <button
             type="button"
             onClick={onPlayScale}
-            className={`w-full py-3 px-4 rounded-xl font-bold text-sm tracking-wide transition-all duration-200 flex items-center justify-center gap-2.5 shadow-lg border ${
+            className={`w-full sm:w-auto py-2.5 px-4 rounded-xl font-bold text-sm tracking-wide transition-all duration-200 flex items-center justify-center gap-2.5 shadow-lg border shrink-0 ${
               isScalePlaying
                 ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-300 shadow-amber-500/20 animate-pulse'
                 : 'bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white border-sky-400/40 shadow-sky-900/30 active:scale-[0.99]'
@@ -279,8 +257,15 @@ export const ScaleCard: React.FC<ScaleCardProps> = ({
               </>
             )}
           </button>
+        )}
+
+        <div className="text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 w-full sm:flex-1 flex items-center justify-between sm:justify-start gap-2">
+          <span>
+            Fórmula Atual ({escalaNome}):{' '}
+            <strong className="text-sky-300 font-mono">{escalasDict[escalaNome]}</strong>
+          </span>
         </div>
-      )}
+      </div>
 
       {/* Collapsible Panel for Custom Scales */}
       {isOpenPanel && (

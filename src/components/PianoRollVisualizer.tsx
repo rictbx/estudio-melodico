@@ -14,7 +14,7 @@ export const PianoRollVisualizer: React.FC<PianoRollVisualizerProps> = ({
   activeNoteIndex,
   scaleNotes,
 }) => {
-  const [activeTab, setActiveTab] = useState<'pianoroll' | 'sheet' | 'keyboard' | 'table'>('pianoroll');
+  const [activeTab, setActiveTab] = useState<'pianoroll' | 'sheet' | 'keyboard' | 'table'>('keyboard');
 
   if (!generatorResult || generatorResult.notas.length === 0) {
     return (
