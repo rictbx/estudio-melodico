@@ -1,0 +1,6 @@
+{
+  "name": "Estúdio Melódico & Gerador MIDI",
+  "description": "Estúdio interativo para criação de permutações melódicas, acompanhamento rítmico, pré-escuta de escalas e sequências, e exportação MIDI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
