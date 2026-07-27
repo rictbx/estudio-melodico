@@ -1,13 +1,1081 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estúdio Melódico & Gerador MIDI (v2.5)</title>
+    <script src="https://cdn.jsdelivr.net/npm/midi-writer-js@2.1.4/browser/midi-writer-js.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/midi-writer-js@2.1.4/build/index.min.js"></script>
+    <script src="https://unpkg.com/midi-writer-js@2.1.4/browser/midi-writer-js.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f1117 0%, #1a1e29 100%);
+            --panel-bg: rgba(26, 30, 42, 0.75);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --accent-primary: #6366f1;
+            --accent-secondary: #0ea5e9;
+            --accent-success: #10b981;
+            --accent-success-hover: #059669;
+            --accent-danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --input-bg: rgba(15, 23, 42, 0.6);
+            --input-border: rgba(255, 255, 255, 0.12);
+            --card-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        }
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+        body { background: var(--bg-gradient); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 30px 15px; }
+        .app-card { background: var(--panel-bg); backdrop-filter: blur(16px); border: 1px solid var(--panel-border); border-radius: 20px; width: 100%; max-width: 680px; padding: 32px; box-shadow: var(--card-shadow); }
+        .app-header { text-align: center; margin-bottom: 28px; }
+        .app-header h1 { font-size: 1.8rem; font-weight: 700; background: linear-gradient(to right, #a5b4fc, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+        .app-header p { color: var(--text-muted); font-size: 0.9rem; }
+        .version-badge { display: inline-block; background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-top: 6px; }
+        .section-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-secondary); font-weight: 600; margin: 24px 0 14px 0; display: flex; align-items: center; gap: 8px; }
+        .section-title::after { content: ''; flex: 1; height: 1px; background: var(--panel-border); }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+        .input-row { display: flex; gap: 8px; align-items: center; }
+        select, input[type="text"], input[type="number"] { width: 100%; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 10px; padding: 11px 14px; color: var(--text-main); font-size: 0.92rem; outline: none; }
+        select:focus, input:focus { border-color: var(--accent-primary); }
+        .btn { background: #2a324b; color: #fff; border: 1px solid var(--panel-border); border-radius: 10px; padding: 11px 16px; font-size: 0.88rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; transition: all 0.2s; }
+        .btn:hover { background: #374151; transform: translateY(-1px); }
+        .btn-icon { padding: 11px; width: 44px; justify-content: center; background: rgba(255, 255, 255, 0.05); }
+        .btn-primary { background: var(--accent-success); color: #fff; width: 100%; padding: 14px; font-size: 1rem; margin-top: 10px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3); }
+        .btn-primary:hover { background: var(--accent-success-hover); }
+        .btn-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .btn-danger:hover { background: var(--accent-danger); color: #fff; }
+        .collapsible-panel { max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; opacity: 0; background: rgba(15, 23, 42, 0.85); border-radius: 12px; border: 1px solid transparent; margin-top: 0; }
+        .collapsible-panel.open { max-height: 380px; opacity: 1; padding: 14px; margin-top: 10px; border-color: var(--panel-border); }
+        .rhythm-builder { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+        .rhythm-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--input-border); color: var(--text-main); padding: 8px; border-radius: 6px; font-size: 0.78rem; cursor: pointer; text-align: center; }
+        .rhythm-btn:hover { background: var(--accent-primary); border-color: var(--accent-primary); }
+    </style>
+</head>
+<body>
+<div class="app-card">
+    <div class="app-header">
+        <h1>Estúdio Melódico & Gerador MIDI</h1>
+        <p>Crie, personalize e pré-visualize permutações e frases musicais</p>
+        <div class="version-badge">Versão v2.5</div>
+    </div>
+    <div class="form-group grid-2">
+        <div>
+            <label>Tônica Principal</label>
+            <select id="tonica" onchange="atualizarNotasWeb()">
+                <option value="A">A (Lá)</option><option value="A#">A# / Bb</option><option value="B">B (Si)</option>
+                <option value="C">C (Dó)</option><option value="C#">C# / Db</option><option value="D">D (Ré)</option>
+                <option value="D#">D# / Eb</option><option value="E">E (Mi)</option><option value="F">F (Fá)</option>
+                <option value="F#">F# / Gb</option><option value="G">G (Sol)</option><option value="G#">G# / Ab</option>
+            </select>
+        </div>
+        <div>
+            <label>Oitava Base</label>
+            <input type="number" id="oitava" value="4" min="1" max="7" onchange="atualizarNotasWeb()">
+        </div>
+    </div>
 
+    <!-- ESCALA -->
+    <div class="form-group">
+        <label>Escala</label>
+        <div class="input-row">
+            <select id="escala-select" onchange="aoMudarEscala()"></select>
+            <button class="btn btn-icon" title="Opções da Escala" onclick="toggleMenu('panel-escala')">⋮</button>
+        </div>
+        <div id="panel-escala" class="collapsible-panel" style="border: 1px solid #007bff;">
+            <div style="font-size:0.82rem; font-weight:600; color:#38bdf8; margin-bottom:8px;">Opções para Escalas:</div>
+            <div class="form-group"><input type="text" id="esc-nome" placeholder="Nome da Escala"></div>
+            <div class="form-group"><input type="text" id="esc-formula" placeholder="Ex: 1,2,3,4,5,6,7"></div>
+            <div class="input-row">
+                <button class="btn" style="flex:1; background:#007bff;" onclick="salvarEscalaWeb()">+ Salvar / Atualizar</button>
+                <button class="btn btn-danger" onclick="excluirEscalaWeb()">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RITMO -->
+    <div class="form-group">
+        <label>Ritmo / Célula</label>
+        <div class="input-row">
+            <select id="ritmo-select"></select>
+            <button class="btn btn-icon" title="Opções de Ritmo" onclick="toggleMenu('panel-ritmo')">⋮</button>
+        </div>
+        <div id="panel-ritmo" class="collapsible-panel" style="border: 1px solid #28a745;">
+            <div style="font-size:0.82rem; font-weight:600; color:#28a745; margin-bottom:8px;">Construtor Visual de Ritmos:</div>
+            <div class="form-group"><input type="text" id="rit-nome" placeholder="Nome da Célula Rítmica"></div>
+            <label style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Clique para adicionar:</label>
+            <div class="rhythm-builder">
+                <button class="rhythm-btn" onclick="addNoteFigure('seminima')">𝅝 Semínima</button>
+                <button class="rhythm-btn" onclick="addNoteFigure('colcheia')">♪ Colcheia</button>
+                <button class="rhythm-btn" onclick="addNoteFigure('semicolcheia')">𝅘𝅥𝅯 Semicolcheia</button>
+                <button class="rhythm-btn" onclick="addNoteFigure('tercina')">𝅘𝅥 Tercina</button>
+                <button class="rhythm-btn" onclick="addNoteFigure('minima')">𝅗𝅥 Mínima</button>
+                <button class="rhythm-btn" onclick="addNoteFigure('colcheia pontuada, semicolcheia')">♪. + 𝅘𝅥𝅯</button>
+                <button class="rhythm-btn" onclick="addNoteFigure('semicolcheia, colcheia pontuada')">𝅘𝅥𝅯 + ♪.</button>
+                <button class="rhythm-btn" onclick="clearRhythmFormula()" style="background:rgba(239,68,68,0.2); color:#fca5a5;">🗑 Limpar</button>
+            </div>
+            <div class="form-group"><input type="text" id="rit-formula" placeholder="Fórmula resultante"></div>
+            <div class="input-row">
+                <button class="btn" style="flex:1; background:#28a745;" onclick="salvarRitmoWeb()">+ Salvar / Atualizar</button>
+                <button class="btn btn-danger" onclick="excluirRitmoWeb()">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PADRÃO -->
+    <div class="form-group">
+        <label>Padrão Melódico</label>
+        <div class="input-row">
+            <select id="padrao-select" onchange="aoMudarPadrao()"></select>
+            <button class="btn btn-icon" title="Opções de Padrão" onclick="toggleMenu('panel-padrao')">⋮</button>
+        </div>
+        <div id="panel-padrao" class="collapsible-panel" style="border: 1px solid #ffc107;">
+            <div style="font-size:0.82rem; font-weight:600; color:#ffc107; margin-bottom:8px;">Opções para Padrões:</div>
+            <div class="form-group"><input type="text" id="pad-nome" placeholder="Nome do Padrão"></div>
+            <div class="form-group"><input type="text" id="pad-formula-edit" placeholder="Ex: 1,2,3"></div>
+            <div class="input-row">
+                <button class="btn" style="flex:1; background:#d97706; color:#fff;" onclick="salvarPadraoWeb()">+ Salvar / Atualizar</button>
+                <button class="btn btn-danger" onclick="excluirPadraoWeb()">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Fórmula Atual (Editável)</label>
+        <input type="text" id="padrao-formula" value="1,2,3">
+    </div>
+
+    <!-- ACORDE & ACOMPANHAMENTO -->
+    <div class="form-group">
+        <label>Acompanhamento Harmônico & Acorde (Tensões)</label>
+        <div class="input-row">
+            <select id="acorde-select"></select>
+            <button class="btn btn-icon" title="Opções de Acorde" onclick="toggleMenu('panel-acorde')">⋮</button>
+        </div>
+        <div id="panel-acorde" class="collapsible-panel" style="border: 1px solid #f59e0b;">
+            <div style="font-size:0.82rem; font-weight:600; color:#f59e0b; margin-bottom:8px;">Opções do Acorde:</div>
+            <div class="form-group"><input type="text" id="acorde-nome" placeholder="Nome do Acorde"></div>
+            <div class="form-group"><input type="text" id="acorde-formula-edit" placeholder="Ex: 1,3,5,7,9,#11"></div>
+            <div class="input-row">
+                <button class="btn" style="flex:1; background:#d97706; color:#fff;" onclick="salvarAcordeWeb()">+ Salvar Acorde</button>
+                <button class="btn btn-danger" onclick="excluirAcordeWeb()">Excluir</button>
+            </div>
+        </div>
+    </div>
+    <div class="grid-3 form-group">
+        <div>
+            <label>Tônica Acorde</label>
+            <select id="acorde-tonica">
+                <option value="A">A</option><option value="A#">A#</option><option value="B">B</option>
+                <option value="C">C</option><option value="C#">C#</option><option value="D">D</option>
+                <option value="D#">D#</option><option value="E">E</option><option value="F">F</option>
+                <option value="F#">F#</option><option value="G">G</option><option value="G#">G#</option>
+            </select>
+        </div>
+        <div>
+            <label>Oitava Acorde</label>
+            <input type="number" id="acorde-oitava" value="3" min="1" max="6">
+        </div>
+        <div>
+            <label>Ritmo do Acorde</label>
+            <div class="input-row">
+                <select id="acorde-ritmo-select"></select>
+                <button class="btn btn-icon" title="Opções de Ritmo do Acorde" onclick="toggleMenu('panel-acorde-ritmo')">⋮</button>
+            </div>
+            <div id="panel-acorde-ritmo" class="collapsible-panel" style="border: 1px solid #10b981;">
+                <div style="font-size:0.82rem; font-weight:600; color:#10b981; margin-bottom:8px;">Opções de Ritmo do Acorde:</div>
+                <div class="form-group"><input type="text" id="acorde-ritmo-nome" placeholder="Nome do Ritmo"></div>
+                <div class="form-group"><input type="text" id="acorde-ritmo-formula-edit" placeholder="Ex: minima, seminima, colcheia"></div>
+                <div style="margin-bottom:8px;">
+                    <div style="font-size:0.75rem; color:#9ca3af; margin-bottom:4px;">Inserir figura:</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                        <button type="button" class="btn" style="padding:2px 6px; font-size:0.75rem;" onclick="addRitmoFiguraWeb('acorde-ritmo-formula-edit', 'seminima')">𝅘𝅥 Semínima</button>
+                        <button type="button" class="btn" style="padding:2px 6px; font-size:0.75rem;" onclick="addRitmoFiguraWeb('acorde-ritmo-formula-edit', 'colcheia')">♪ Colcheia</button>
+                        <button type="button" class="btn" style="padding:2px 6px; font-size:0.75rem;" onclick="addRitmoFiguraWeb('acorde-ritmo-formula-edit', 'semicolcheia')">𝅘𝅥𝅯 Semicolcheia</button>
+                        <button type="button" class="btn" style="padding:2px 6px; font-size:0.75rem;" onclick="addRitmoFiguraWeb('acorde-ritmo-formula-edit', 'tercina')">𝅘𝅥³ Tercina</button>
+                        <button type="button" class="btn" style="padding:2px 6px; font-size:0.75rem;" onclick="addRitmoFiguraWeb('acorde-ritmo-formula-edit', 'minima')">𝅗𝅥 Mínima</button>
+                        <button type="button" class="btn" style="padding:2px 6px; font-size:0.75rem;" onclick="addRitmoFiguraWeb('acorde-ritmo-formula-edit', 'semibreve')">𝅝 Semibreve</button>
+                    </div>
+                </div>
+                <div class="input-row">
+                    <button class="btn" style="flex:1; background:#059669; color:#fff;" onclick="salvarAcordeRitmoWeb()">+ Salvar Ritmo</button>
+                    <button class="btn btn-danger" onclick="excluirAcordeRitmoWeb()">Excluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="form-group" style="display:flex; align-items:center; justify-content:space-between; background:#111827; padding:10px; border-radius:8px;">
+        <label style="margin:0; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="acorde-ativo" checked> Tocar Acorde Junto com a Progressão
+        </label>
+        <button class="btn" style="background:#d97706; color:#fff; font-size:0.8rem; padding:6px 12px;" onclick="tocarAcordeWeb()">Ouvir Acorde</button>
+    </div>
+
+    <div class="section-title">Controles de Áudio Web</div>
+    <div class="grid-2 form-group">
+        <button class="btn" id="btn-ouvir-escala-web" style="background:#0ea5e9; color:#fff;" onclick="tocarEscalaWeb()">▶ Ouvir Escala</button>
+        <button class="btn" id="btn-ouvir-prog-web" style="background:#6366f1; color:#fff;" onclick="tocarProgressaoWeb()">▶ Ouvir Progressão</button>
+    </div>
+
+    <div class="section-title">Configurações Globais</div>
+    <div class="grid-2 form-group">
+        <div>
+            <label>Nota Inicial (Escala)</label>
+            <select id="nota-inicial-select"></select>
+        </div>
+        <div>
+            <label>Direção</label>
+            <select id="direcao">
+                <option value="asc">Ascendente</option>
+                <option value="desc">Descendente</option>
+            </select>
+        </div>
+    </div>
+    <div class="grid-3 form-group">
+        <div><label>Compassos</label><input type="number" id="compassos" value="8" min="1" max="16"></div>
+        <div><label>BPM</label><input type="number" id="bpm" value="120" min="40" max="240"></div>
+        <div>
+            <label>Fórmula Compasso</label>
+            <select id="time-sig"><option value="4/4">4/4</option><option value="3/4">3/4</option><option value="6/8">6/8</option></select>
+        </div>
+    </div>
+    <button class="btn btn-primary" onclick="gerarEBaixarMIDI()">Gerar e Baixar MIDI</button>
+</div>
+
+<script>
+    let ESCALAS = {
+  "Menor Harmônica": "1,2,3b,4,5,6b,7",
+  "Menor Natural (Eólica)": "1,2,3b,4,5,6b,7b",
+  "Menor Melódica": "1,2,3b,4,5,6,7",
+  "Maior (Jônica)": "1,2,3,4,5,6,7",
+  "Dórica": "1,2,3b,4,5,6,7b",
+  "Frígia": "1,2b,3b,4,5,6b,7b",
+  "Lídia": "1,2,3,4#,5,6,7",
+  "Mixolídia": "1,2,3,4,5,7b",
+  "Blues": "1,3b,4,4#,5,7b",
+  "Dominante Bebop": "1,2,3,4,5,6,7b,7",
+  "Húngara Menor": "1,2,3b,4#,5,6b,7"
+};
+    let RITMOS = {
+  "Tercinas de Colcheia": "tercina",
+  "Sextina (6 semicolcheias)": "sextina",
+  "Semínima (1t)": "seminima",
+  "Semínima Pontuada (1.5t)": "seminima_pontuada",
+  "Mínima (2t)": "minima",
+  "Mínima Pontuada (3t)": "minima_pontuada",
+  "Colcheia Pontuada + Semicolcheia": "colcheia pontuada, semicolcheia",
+  "Semicolcheia + Colcheia Pontuada": "semicolcheia, colcheia pontuada",
+  "Colcheia + 2 Semicolcheias": "colcheia, semicolcheia, semicolcheia",
+  "2 Semicolcheias + Colcheia": "semicolcheia, semicolcheia, colcheia",
+  "Semicolcheia + Colcheia + Semicolcheia": "semicolcheia, colcheia, semicolcheia",
+  "Semínima Pontuada + Colcheia": "seminima pontuada, colcheia",
+  "Mínima Pontuada + Semínima": "minima pontuada, seminima",
+  "Semínima + Mínima Pontuada": "seminima, minima pontuada"
+};
+    let PADROES = {
+  "Linear Simples (1,2,3)": "1,2,3",
+  "Cromático Tenso": "1,2,2#,3",
+  "Salto de Terça (1-3-2-4)": "1,3,2,4",
+  "Giro em Torno do Grau (1-2-1-7b)": "1,2,1,7b",
+  "Aproximação Inferior (7b-1-2-3)": "7b,1,2,3",
+  "Arpejo Ascendente (1-3-5-7)": "1,3,5,7"
+};
+    let ACORDES = {
+  "Tríade Maior (1,3,5)": "1,3,5",
+  "Tríade Menor (1,3b,5)": "1,3b,5",
+  "Sétima Dominante - 7 (1,3,5,7b)": "1,3,5,7b",
+  "Sétima Maior - maj7 (1,3,5,7)": "1,3,5,7",
+  "Menor com Sétima - m7 (1,3b,5,7b)": "1,3b,5,7b",
+  "Meio-Diminuto - m7b5 (1,3b,5b,7b)": "1,3b,5b,7b",
+  "Diminuto - dim7 (1,3b,5b,6)": "1,3b,5b,6",
+  "Sétima com Nona - 7(9) (1,3,5,7b,9)": "1,3,5,7b,9",
+  "Sétima Maior com Nona - maj7(9) (1,3,5,7,9)": "1,3,5,7,9",
+  "Menor 7 com Nona e 11 - m7(9,11)": "1,3b,5,7b,9,11",
+  "Dominante Alterado - 7alt (1,3,5b,7b,9b,13b)": "1,3,5b,7b,9b,13b",
+  "Sétima Maior com 9 e 11# - maj7(9,#11)": "1,3,5,7,9,11#",
+  "Sus4 com 7 e 9 - 7sus4(9)": "1,4,5,7b,9"
+};
+    let CONFIG = {
+  "tonica": "A",
+  "oitavaBase": 4,
+  "escalaNome": "Menor Harmônica",
+  "ritmoNome": "Tercinas de Colcheia",
+  "padraoNome": "Linear Simples (1,2,3)",
+  "padraoFormula": "1,2,3",
+  "notaInicial": "A4",
+  "direcao": "asc",
+  "numCompassos": 8,
+  "bpm": 120,
+  "timeSignature": "4/4",
+  "acordeNome": "Sétima Maior com Nona - maj7(9) (1,3,5,7,9)",
+  "acordeTonica": "A",
+  "acordeOitava": 3,
+  "acordeRitmoNome": "Mínima (2t)",
+  "acordeAtivo": true
+};
+
+    const notaValores = { 'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'F':5, 'F#':6, 'Gb':6, 'G':7, 'G#':8, 'Ab':8, 'A':9, 'A#':10, 'Bb':10, 'B':11 };
+    const pianoFreqs = {
+        'A0': 27.5, 'A#0': 29.14, 'B0': 30.87,
+        'C1': 32.7, 'C#1': 34.65, 'D1': 36.71, 'D#1': 38.89, 'E1': 41.2, 'F1': 43.65, 'F#1': 46.25, 'G1': 49.0, 'G#1': 51.91, 'A1': 55.0, 'A#1': 58.27, 'B1': 61.74,
+        'C2': 65.41, 'C#2': 69.3, 'D2': 73.42, 'D#2': 77.78, 'E2': 82.41, 'F2': 87.31, 'F#2': 92.5, 'G2': 98.0, 'G#2': 103.83, 'A2': 110.0, 'A#2': 116.54, 'B2': 123.47,
+        'C3': 130.81, 'C#3': 138.59, 'D3': 146.83, 'D#3': 155.56, 'E3': 164.81, 'F3': 174.61, 'F#3': 185.0, 'G3': 196.0, 'G#3': 207.65, 'A3': 220.0, 'A#3': 233.08, 'B3': 246.94,
+        'C4': 261.63, 'C#4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'E4': 329.63, 'F4': 349.23, 'F#4': 369.99, 'G4': 392.0, 'G#4': 415.3, 'A4': 440.0, 'A#4': 466.16, 'B4': 493.88,
+        'C5': 523.25, 'C#5': 554.37, 'D5': 587.33, 'D#5': 622.25, 'E5': 659.25, 'F5': 698.46, 'F#5': 739.99, 'G5': 783.99, 'G#5': 830.61, 'A5': 880.0, 'A#5': 932.33, 'B5': 987.77,
+        'C6': 1046.5, 'C#6': 1108.73, 'D6': 1174.66, 'D#6': 1244.51, 'E6': 1318.51, 'F6': 1396.91, 'F#6': 1479.98, 'G6': 1567.98, 'G#6': 1661.22, 'A6': 1760.0, 'A#6': 1864.66, 'B6': 1975.53,
+        'C7': 2093.0, 'C#7': 2217.46, 'D7': 2349.32, 'D#7': 2489.02, 'E7': 2637.02, 'F7': 2793.83, 'F#7': 2959.96, 'G7': 3135.96, 'G#7': 3322.44, 'A7': 3520.0, 'A#7': 3729.31, 'B7': 3951.07,
+        'C8': 4186.01
+    };
+
+    function init() {
+        if (CONFIG.tonica) {
+            let el = document.getElementById('tonica');
+            if (el) el.value = CONFIG.tonica;
+        }
+        if (CONFIG.oitavaBase) {
+            let el = document.getElementById('oitava');
+            if (el) el.value = CONFIG.oitavaBase;
+        }
+
+        renderSelects();
+
+        if (CONFIG.escalaNome && ESCALAS[CONFIG.escalaNome]) {
+            let el = document.getElementById('escala-select');
+            if (el) el.value = CONFIG.escalaNome;
+        }
+        if (CONFIG.ritmoNome && RITMOS[CONFIG.ritmoNome]) {
+            let el = document.getElementById('ritmo-select');
+            if (el) el.value = CONFIG.ritmoNome;
+        }
+        if (CONFIG.padraoNome && PADROES[CONFIG.padraoNome]) {
+            let el = document.getElementById('padrao-select');
+            if (el) el.value = CONFIG.padraoNome;
+        }
+        if (CONFIG.padraoFormula) {
+            let el = document.getElementById('padrao-formula');
+            if (el) el.value = CONFIG.padraoFormula;
+        }
+
+        if (CONFIG.acordeNome && ACORDES[CONFIG.acordeNome]) {
+            let el = document.getElementById('acorde-select');
+            if (el) el.value = CONFIG.acordeNome;
+        }
+        if (CONFIG.acordeTonica) {
+            let el = document.getElementById('acorde-tonica');
+            if (el) el.value = CONFIG.acordeTonica;
+        }
+        if (CONFIG.acordeOitava) {
+            let el = document.getElementById('acorde-oitava');
+            if (el) el.value = CONFIG.acordeOitava;
+        }
+        if (CONFIG.acordeRitmoNome && RITMOS[CONFIG.acordeRitmoNome]) {
+            let el = document.getElementById('acorde-ritmo-select');
+            if (el) el.value = CONFIG.acordeRitmoNome;
+        }
+        if (CONFIG.acordeAtivo !== undefined) {
+            let el = document.getElementById('acorde-ativo');
+            if (el) el.checked = !!CONFIG.acordeAtivo;
+        }
+
+        atualizarNotasWeb();
+
+        if (CONFIG.notaInicial) {
+            let sel = document.getElementById('nota-inicial-select');
+            if (sel) {
+                let exists = Array.from(sel.options).some(opt => opt.value === CONFIG.notaInicial);
+                if (!exists) {
+                    let opt = document.createElement('option');
+                    opt.value = CONFIG.notaInicial;
+                    opt.innerText = CONFIG.notaInicial;
+                    sel.appendChild(opt);
+                }
+                sel.value = CONFIG.notaInicial;
+            }
+        }
+
+        if (CONFIG.direcao) {
+            let el = document.getElementById('direcao');
+            if (el) el.value = CONFIG.direcao;
+        }
+        if (CONFIG.numCompassos) {
+            let el = document.getElementById('compassos');
+            if (el) el.value = CONFIG.numCompassos;
+        }
+        if (CONFIG.bpm) {
+            let el = document.getElementById('bpm');
+            if (el) el.value = CONFIG.bpm;
+        }
+        if (CONFIG.timeSignature) {
+            let el = document.getElementById('time-sig');
+            if (el) el.value = CONFIG.timeSignature;
+        }
+    }
+    function renderSelects() {
+        populateSelect('escala-select', ESCALAS);
+        populateSelect('ritmo-select', RITMOS);
+        populateSelect('padrao-select', PADROES);
+        populateSelect('acorde-select', ACORDES);
+        populateSelect('acorde-ritmo-select', RITMOS);
+        aoMudarPadrao();
+    }
+    function populateSelect(id, dict) {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const currVal = sel.value;
+        sel.innerHTML = '';
+        for (let key in dict) {
+            let opt = document.createElement('option');
+            opt.value = key;
+            opt.innerText = key;
+            sel.appendChild(opt);
+        }
+        if (dict[currVal]) sel.value = currVal;
+    }
+    function toggleMenu(panelId) {
+        const p = document.getElementById(panelId);
+        if (!p) return;
+        const isOpen = p.classList.contains('open');
+        document.querySelectorAll('.collapsible-panel').forEach(el => el.classList.remove('open'));
+        if (!isOpen) {
+            p.classList.add('open');
+            if (panelId === 'panel-escala') {
+                document.getElementById('esc-nome').value = document.getElementById('escala-select').value;
+                document.getElementById('esc-formula').value = ESCALAS[document.getElementById('escala-select').value] || '';
+            } else if (panelId === 'panel-ritmo') {
+                document.getElementById('rit-nome').value = document.getElementById('ritmo-select').value;
+                document.getElementById('rit-formula').value = RITMOS[document.getElementById('ritmo-select').value] || '';
+            } else if (panelId === 'panel-padrao') {
+                document.getElementById('pad-nome').value = document.getElementById('padrao-select').value;
+                document.getElementById('pad-formula-edit').value = PADROES[document.getElementById('padrao-select').value] || '';
+            } else if (panelId === 'panel-acorde') {
+                document.getElementById('acorde-nome').value = document.getElementById('acorde-select').value;
+                document.getElementById('acorde-formula-edit').value = ACORDES[document.getElementById('acorde-select').value] || '';
+            } else if (panelId === 'panel-acorde-ritmo') {
+                document.getElementById('acorde-ritmo-nome').value = document.getElementById('acorde-ritmo-select').value;
+                document.getElementById('acorde-ritmo-formula-edit').value = RITMOS[document.getElementById('acorde-ritmo-select').value] || '';
+            }
+        }
+    }
+    function fecharPaineisWeb() {
+        document.querySelectorAll('.collapsible-panel').forEach(el => el.classList.remove('open'));
+    }
+
+    function salvarEscalaWeb() {
+        let n = document.getElementById('esc-nome').value.trim();
+        let f = document.getElementById('esc-formula').value.trim();
+        if (n && f) {
+            ESCALAS[n] = f;
+            populateSelect('escala-select', ESCALAS);
+            document.getElementById('escala-select').value = n;
+            atualizarNotasWeb();
+            fecharPaineisWeb();
+        }
+    }
+    function excluirEscalaWeb() {
+        let sel = document.getElementById('escala-select').value;
+        if (Object.keys(ESCALAS).length > 1) {
+            delete ESCALAS[sel];
+            populateSelect('escala-select', ESCALAS);
+            atualizarNotasWeb();
+            fecharPaineisWeb();
+        }
+    }
+    function aoMudarEscala() { atualizarNotasWeb(); }
+
+    function salvarRitmoWeb() {
+        let n = document.getElementById('rit-nome').value.trim();
+        let f = document.getElementById('rit-formula').value.trim();
+        if (n && f) {
+            RITMOS[n] = f;
+            populateSelect('ritmo-select', RITMOS);
+            document.getElementById('ritmo-select').value = n;
+            fecharPaineisWeb();
+        }
+    }
+    function excluirRitmoWeb() {
+        let sel = document.getElementById('ritmo-select').value;
+        if (Object.keys(RITMOS).length > 1) {
+            delete RITMOS[sel];
+            populateSelect('ritmo-select', RITMOS);
+            fecharPaineisWeb();
+        }
+    }
+    function addNoteFigure(fig) {
+        const input = document.getElementById('rit-formula');
+        if (!input) return;
+        input.value = input.value ? input.value + ', ' + fig : fig;
+    }
+    function clearRhythmFormula() { 
+        const input = document.getElementById('rit-formula');
+        if (input) input.value = ''; 
+    }
+
+    function salvarPadraoWeb() {
+        let n = document.getElementById('pad-nome').value.trim();
+        let f = document.getElementById('pad-formula-edit').value.trim();
+        if (n && f) {
+            PADROES[n] = f;
+            populateSelect('padrao-select', PADROES);
+            document.getElementById('padrao-select').value = n;
+            document.getElementById('padrao-formula').value = f;
+            fecharPaineisWeb();
+        }
+    }
+    function excluirPadraoWeb() {
+        let sel = document.getElementById('padrao-select').value;
+        if (Object.keys(PADROES).length > 1) {
+            delete PADROES[sel];
+            populateSelect('padrao-select', PADROES);
+            document.getElementById('padrao-formula').value = PADROES[document.getElementById('padrao-select').value];
+            fecharPaineisWeb();
+        }
+    }
+    function aoMudarPadrao() {
+        const sel = document.getElementById('padrao-select').value;
+        const el = document.getElementById('padrao-formula');
+        if (el) el.value = PADROES[sel] || '1,2,3';
+    }
+
+    function salvarAcordeWeb() {
+        let n = document.getElementById('acorde-nome').value.trim();
+        let f = document.getElementById('acorde-formula-edit').value.trim();
+        if (n && f) {
+            ACORDES[n] = f;
+            populateSelect('acorde-select', ACORDES);
+            document.getElementById('acorde-select').value = n;
+            fecharPaineisWeb();
+        }
+    }
+    function excluirAcordeWeb() {
+        let sel = document.getElementById('acorde-select').value;
+        if (Object.keys(ACORDES).length > 1) {
+            delete ACORDES[sel];
+            populateSelect('acorde-select', ACORDES);
+            fecharPaineisWeb();
+        }
+    }
+
+    function addRitmoFiguraWeb(inputId, fig) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.value = input.value ? input.value + ', ' + fig : fig;
+    }
+
+    function salvarAcordeRitmoWeb() {
+        let n = document.getElementById('acorde-ritmo-nome').value.trim();
+        let f = document.getElementById('acorde-ritmo-formula-edit').value.trim();
+        if (n && f) {
+            RITMOS[n] = f;
+            populateSelect('ritmo-select', RITMOS);
+            populateSelect('acorde-ritmo-select', RITMOS);
+            document.getElementById('acorde-ritmo-select').value = n;
+            fecharPaineisWeb();
+        }
+    }
+
+    function excluirAcordeRitmoWeb() {
+        let sel = document.getElementById('acorde-ritmo-select').value;
+        if (Object.keys(RITMOS).length > 1) {
+            delete RITMOS[sel];
+            populateSelect('ritmo-select', RITMOS);
+            populateSelect('acorde-ritmo-select', RITMOS);
+            fecharPaineisWeb();
+        }
+    }
+
+    function parseAcordeIntervalosWeb(formulaStr) {
+        if (!formulaStr) return [0, 4, 7];
+        const baseMaj = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17, 19, 21, 23];
+        const partes = formulaStr.split(',').map(x => x.trim());
+        let interv = [];
+        partes.forEach(p => {
+            let mod = 0;
+            let numStr = p;
+            if (p.includes('#')) { mod = 1; numStr = p.replace('#', ''); }
+            else if (p.includes('b')) { mod = -1; numStr = p.replace('b', ''); }
+            let grau = parseInt(numStr, 10);
+            if (!isNaN(grau) && grau >= 1) {
+                let idx = grau - 1;
+                let semitones = idx < baseMaj.length ? baseMaj[idx] : baseMaj[(idx % 7)] + Math.floor(idx / 7) * 12;
+                interv.push(semitones + mod);
+            }
+        });
+        return interv.length > 0 ? interv : [0, 4, 7];
+    }
+
+    function obterNotasAcordeWeb() {
+        const tonica = document.getElementById('acorde-tonica').value || 'A';
+        const oitava = parseInt(document.getElementById('acorde-oitava').value, 10) || 3;
+        const acordeNome = document.getElementById('acorde-select').value;
+        const formulaStr = ACORDES[acordeNome] || '1,3,5';
+        const interv = parseAcordeIntervalosWeb(formulaStr);
+        let baseVal = (notaValores[tonica] !== undefined ? notaValores[tonica] : 0) + (oitava + 1) * 12;
+        const nomesNotas = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        return interv.map(iv => {
+            let total = baseVal + iv;
+            let oct = Math.floor(total / 12) - 1;
+            let nIdx = (total % 12 + 12) % 12;
+            return nomesNotas[nIdx] + oct;
+        });
+    }
+
+    function parseEscalaIntervalos(formulaStr) {
+        const baseMaj = [0, 2, 4, 5, 7, 9, 11];
+        const partes = formulaStr.split(',').map(x => x.trim());
+        let interv = [];
+        partes.forEach(p => {
+            let mod = 0;
+            let numStr = p;
+            if (p.includes('#')) { mod = 1; numStr = p.replace('#', ''); }
+            else if (p.includes('b')) { mod = -1; numStr = p.replace('b', ''); }
+            let grauIdx = parseInt(numStr) - 1;
+            if (!isNaN(grauIdx) && grauIdx >= 0 && grauIdx < baseMaj.length) {
+                interv.push(baseMaj[grauIdx] + mod);
+            }
+        });
+        return interv.length > 0 ? interv : [0, 2, 4, 5, 7, 9, 11];
+    }
+
+    function obterNotasEscalaWeb() {
+        const tonica = document.getElementById('tonica').value;
+        const oitava = parseInt(document.getElementById('oitava').value) || 4;
+        const tipoEscala = document.getElementById('escala-select').value;
+        const formulaStr = ESCALAS[tipoEscala] || '1,2,3,4,5,6,7';
+        const interv = parseEscalaIntervalos(formulaStr);
+        let baseVal = (notaValores[tonica] !== undefined ? notaValores[tonica] : 9) + (oitava + 1) * 12;
+        const nomesNotas = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        return interv.map(iv => {
+            let total = baseVal + iv;
+            let oit = Math.floor(total / 12) - 1;
+            let nIdx = (total % 12 + 12) % 12;
+            return nomesNotas[nIdx] + oit;
+        });
+    }
+
+    function getNoteMidiWeb(noteStr) {
+        let match = noteStr ? noteStr.match(/^([A-G][#b]?)(-?d+)$/) : null;
+        if (!match) return 69;
+        let letter = match[1];
+        let oct = parseInt(match[2]);
+        let semitone = notaValores[letter] !== undefined ? notaValores[letter] : 0;
+        return (oct + 1) * 12 + semitone;
+    }
+
+    function getNoteFreqWeb(noteStr) {
+        if (pianoFreqs[noteStr]) return pianoFreqs[noteStr];
+        let midi = getNoteMidiWeb(noteStr);
+        return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+
+    function obterEscalaExtendidaWeb() {
+        const tonica = document.getElementById('tonica').value;
+        const tipoEscala = document.getElementById('escala-select').value;
+        const formulaStr = ESCALAS[tipoEscala] || '1,2,3,4,5,6,7';
+        const scaleDegrees = formulaStr.split(',').map(x => x.trim()).filter(Boolean);
+        const baseMaj = [0, 2, 4, 5, 7, 9, 11];
+        const nomesNotas = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const tonicaVal = notaValores[tonica] !== undefined ? notaValores[tonica] : 9;
+
+        let escalaExt = [];
+
+        for (let currentOct = 0; currentOct <= 8; currentOct++) {
+            let rootMidi = (currentOct + 1) * 12 + tonicaVal;
+            scaleDegrees.forEach(item => {
+                let mod = 0;
+                let baseStr = item;
+                if (item.includes('#')) { mod = 1; baseStr = item.replace('#', ''); }
+                else if (item.includes('b')) { mod = -1; baseStr = item.replace('b', ''); }
+                let idxG = parseInt(baseStr) - 1;
+                if (!isNaN(idxG) && idxG >= 0 && idxG < baseMaj.length) {
+                    let semitoneOffset = baseMaj[idxG] + mod;
+                    let midi = rootMidi + semitoneOffset;
+                    if (midi >= 21 && midi <= 108) {
+                        let oct = Math.floor(midi / 12) - 1;
+                        let nIdx = (midi % 12 + 12) % 12;
+                        escalaExt.push({ pitchStr: nomesNotas[nIdx] + oct, midi: midi });
+                    }
+                }
+            });
+        }
+        return escalaExt;
+    }
+
+    function atualizarNotasWeb() {
+        const notas = obterNotasEscalaWeb();
+        const sel = document.getElementById('nota-inicial-select');
+        if (!sel) return;
+        sel.innerHTML = '';
+        notas.forEach(n => {
+            let opt = document.createElement('option');
+            opt.value = n;
+            opt.innerText = n;
+            sel.appendChild(opt);
+        });
+    }
+
+    function getDuracaoValorWeb(termo) {
+        let t = termo.toLowerCase().trim();
+        if (t.includes('tercina')) return 1.0 / 3.0;
+        if (t.includes('sextina')) return 1.0 / 6.0;
+        if (t.includes('semibreve')) return 4.0;
+        if (t.includes('minima') || t.includes('mínima')) return t.includes('pont') ? 3.0 : 2.0;
+        if (t.includes('seminima') || t.includes('semínima')) return t.includes('pont') ? 1.5 : 1.0;
+        if (t.includes('semicolcheia')) return t.includes('pont') ? 0.375 : 0.25;
+        if (t.includes('colcheia')) return t.includes('pont') ? 0.75 : 0.5;
+        return 0.5;
+    }
+
+    function gerarSequenciaNotasWeb() {
+        const escalaExt = obterEscalaExtendidaWeb();
+        const compassos = parseInt(document.getElementById('compassos').value) || 8;
+        const timeSig = document.getElementById('time-sig').value;
+        const partesComp = timeSig.split('/');
+        const numTemposComp = parseInt(partesComp[0]) || 4;
+        
+        const direcao = document.getElementById('direcao').value;
+        let notaInicial = document.getElementById('nota-inicial-select').value;
+        const oitavaBase = parseInt(document.getElementById('oitava').value) || 4;
+
+        if (!notaInicial) {
+            const tonica = document.getElementById('tonica').value || 'A';
+            notaInicial = tonica + oitavaBase;
+        } else if (!/d/.test(notaInicial)) {
+            notaInicial += oitavaBase;
+        }
+
+        const targetMidi = getNoteMidiWeb(notaInicial);
+
+        let startIndex = 0;
+        let minDist = 999;
+        escalaExt.forEach((item, idx) => {
+            let dist = Math.abs(item.midi - targetMidi);
+            if (dist < minDist) {
+                minDist = dist;
+                startIndex = idx;
+            }
+        });
+
+        let totalTemposDesejados = (timeSig === '6/8') ? (compassos * 3.0) : (compassos * numTemposComp);
+
+        let padraoStr = document.getElementById('padrao-formula').value.trim();
+        let graus = padraoStr.split(',').map(x => {
+            let clean = x.trim();
+            let mod = 0;
+            if (clean.includes('#')) { mod = 1; clean = clean.replace('#', ''); }
+            else if (clean.includes('b')) { mod = -1; clean = clean.replace('b', ''); }
+            let g = parseInt(clean) - 1;
+            return { degree: isNaN(g) ? 0 : g, mod: mod };
+        });
+
+        let tempoAcumulado = 0.0;
+        let passoIdx = 0;
+        let contador = 0;
+        const isDesc = direcao === 'desc';
+
+        let ritmoSel = document.getElementById('ritmo-select').value;
+        let ritmoStr = RITMOS[ritmoSel] || 'colcheia';
+        let itensRitmo = ritmoStr.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+        if (itensRitmo.length === 0) itensRitmo = ['colcheia'];
+
+        let notasFinal = [];
+        let duracoesFinal = [];
+
+        while (tempoAcumulado < totalTemposDesejados && passoIdx < 1000) {
+            let baseIdx = isDesc ? startIndex - passoIdx : startIndex + passoIdx;
+
+            for (let p of graus) {
+                if (tempoAcumulado >= totalTemposDesejados) break;
+
+                let idxFinal = isDesc ? baseIdx - p.degree : baseIdx + p.degree;
+                let validIdx = Math.max(0, Math.min(escalaExt.length - 1, idxFinal));
+
+                let midiFinal = escalaExt[validIdx].midi + p.mod;
+                midiFinal = Math.max(21, Math.min(108, midiFinal));
+
+                let oct = Math.floor(midiFinal / 12) - 1;
+                let nIdx = (midiFinal % 12 + 12) % 12;
+                let nomesNotas = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                let nName = nomesNotas[nIdx] + oct;
+
+                let termoRit = itensRitmo[contador % itensRitmo.length];
+                let durVal = getDuracaoValorWeb(termoRit);
+
+                notasFinal.push(nName);
+                duracoesFinal.push(durVal);
+
+                tempoAcumulado += durVal;
+                contador++;
+            }
+            passoIdx++;
+        }
+        return { notas: notasFinal, duracoes: duracoesFinal };
+    }
+
+    let globalAudioCtx = null;
+    let globalActiveOscs = [];
+    let audioAtivoWeb = null;
+
+    function pararAudioWeb() {
+        if (globalActiveOscs) {
+            globalActiveOscs.forEach(o => { try { o.stop(); } catch(e) {} });
+        }
+        globalActiveOscs = [];
+        if (globalAudioCtx && globalAudioCtx.state !== 'closed') {
+            globalAudioCtx.close();
+        }
+        audioAtivoWeb = null;
+        const b1 = document.getElementById('btn-ouvir-escala-web');
+        const b2 = document.getElementById('btn-ouvir-prog-web');
+        if (b1) b1.innerText = "▶ Ouvir Escala";
+        if (b2) b2.innerText = "▶ Ouvir Progressão";
+    }
+
+    function tocarSequenciaWeb(notas, duracoes, bpm, tipo, btnId) {
+        if (audioAtivoWeb === tipo) {
+            pararAudioWeb();
+            return;
+        }
+        pararAudioWeb();
+        audioAtivoWeb = tipo;
+        const btn = document.getElementById(btnId);
+        if (btn) btn.innerText = "⏹ Parar " + (tipo === 'escala' ? "Escala" : "Progressão");
+
+        globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
+
+        const secPerBeat = 60.0 / bpm;
+        let currTime = 0;
+        let totalDurSec = 0;
+        duracoes.forEach(d => totalDurSec += (d * secPerBeat));
+
+        notas.forEach((nota, i) => {
+            let dur = duracoes[i] * secPerBeat;
+            let scheduleTime = globalAudioCtx.currentTime + currTime;
+            let osc = globalAudioCtx.createOscillator();
+            let gain = globalAudioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = getNoteFreqWeb(nota);
+            gain.gain.setValueAtTime(0.2, scheduleTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, scheduleTime + (dur * 0.95));
+            osc.connect(gain);
+            gain.connect(globalAudioCtx.destination);
+            osc.start(scheduleTime);
+            osc.stop(scheduleTime + dur);
+            globalActiveOscs.push(osc);
+            currTime += dur;
+        });
+
+        setTimeout(() => {
+            if (audioAtivoWeb === tipo) pararAudioWeb();
+        }, (totalDurSec + 0.1) * 1000);
+    }
+
+    function tocarAcordeWeb() {
+        const notas = obterNotasAcordeWeb();
+        pararAudioWeb();
+        globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
+
+        const now = globalAudioCtx.currentTime;
+        notas.forEach(nota => {
+            let osc = globalAudioCtx.createOscillator();
+            let gain = globalAudioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = getNoteFreqWeb(nota);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.0);
+            osc.connect(gain);
+            gain.connect(globalAudioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 2.0);
+            globalActiveOscs.push(osc);
+        });
+
+        setTimeout(() => {
+            pararAudioWeb();
+        }, 2100);
+    }
+
+    function tocarEscalaWeb() {
+        const notas = obterNotasEscalaWeb();
+        const duracoes = notas.map(() => 1.0);
+        const bpm = parseInt(document.getElementById('bpm').value) || 120;
+        tocarSequenciaWeb(notas, duracoes, bpm, 'escala', 'btn-ouvir-escala-web');
+    }
+
+    function tocarProgressaoWeb() {
+        const res = gerarSequenciaNotasWeb();
+        const bpm = parseInt(document.getElementById('bpm').value) || 120;
+
+        const acordeAtivo = document.getElementById('acorde-ativo') ? document.getElementById('acorde-ativo').checked : false;
+
+        tocarSequenciaWeb(res.notas, res.duracoes, bpm, 'progressao', 'btn-ouvir-prog-web');
+
+        if (acordeAtivo && globalAudioCtx && res.duracoes.length > 0) {
+            const secPerBeat = 60.0 / bpm;
+            let totalBeats = res.duracoes.reduce((a, b) => a + b, 0);
+
+            const chordNotes = obterNotasAcordeWeb();
+            const ritmoAcordeSel = document.getElementById('acorde-ritmo-select') ? document.getElementById('acorde-ritmo-select').value : 'Mínima (2t)';
+            const ritmoFormula = RITMOS[ritmoAcordeSel] || 'mínima';
+            const partesRitmo = ritmoFormula.split(',').map(x => x.trim()).filter(Boolean);
+
+            let tempoAcumulado = 0;
+            let rIdx = 0;
+
+            while (tempoAcumulado < totalBeats) {
+                let termo = partesRitmo[rIdx % partesRitmo.length] || 'mínima';
+                let durBeat = getDuracaoValorWeb(termo);
+                let scheduleTime = globalAudioCtx.currentTime + (tempoAcumulado * secPerBeat);
+                let noteDurSec = durBeat * secPerBeat;
+
+                chordNotes.forEach(nota => {
+                    let osc = globalAudioCtx.createOscillator();
+                    let gain = globalAudioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = getNoteFreqWeb(nota);
+                    gain.gain.setValueAtTime(0.08, scheduleTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, scheduleTime + (noteDurSec * 0.95));
+                    osc.connect(gain);
+                    gain.connect(globalAudioCtx.destination);
+                    osc.start(scheduleTime);
+                    osc.stop(scheduleTime + noteDurSec);
+                    globalActiveOscs.push(osc);
+                });
+
+                tempoAcumulado += durBeat;
+                rIdx++;
+            }
+        }
+    }
+
+    function parseMidiNumberWeb(pitch) {
+        if (!pitch) return 60;
+        const match = pitch.match(/^([A-G])([#b]?)(-?d+)$/);
+        if (!match) return 60;
+        const noteMap = { 'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11 };
+        let base = noteMap[match[1]] !== undefined ? noteMap[match[1]] : 0;
+        if (match[2] === '#') base += 1;
+        if (match[2] === 'b') base -= 1;
+        const octave = parseInt(match[3], 10);
+        return Math.max(0, Math.min(127, (octave + 1) * 12 + base));
+    }
+
+    function encodeVLQWeb(num) {
+        let value = Math.max(0, Math.round(num));
+        let buffer = [value & 0x7F];
+        while ((value >>= 7) > 0) {
+            buffer.push((value & 0x7F) | 0x80);
+        }
+        return buffer.reverse();
+    }
+
+    function gerarMIDIBytesWeb(notas, duracoes, bpm, temposComp) {
+        const PPQ = 480;
+        let trackEvents = [];
+
+        const mpqn = Math.round(60000000 / bpm);
+        trackEvents.push(0x00, 0xFF, 0x51, 0x03, (mpqn >> 16) & 0xFF, (mpqn >> 8) & 0xFF, mpqn & 0xFF);
+        trackEvents.push(0x00, 0xFF, 0x58, 0x04, temposComp & 0xFF, 0x02, 0x18, 0x08);
+
+        for (let i = 0; i < notas.length; i++) {
+            const midiNum = parseMidiNumberWeb(notas[i]);
+            const durBeats = duracoes[i] || 0.5;
+            const durationTicks = Math.round(durBeats * PPQ);
+
+            trackEvents.push(0x00, 0x90, midiNum & 0x7F, 0x64);
+
+            const deltaBytes = encodeVLQWeb(durationTicks);
+            trackEvents.push(...deltaBytes, 0x80, midiNum & 0x7F, 0x00);
+        }
+
+        trackEvents.push(0x00, 0xFF, 0x2F, 0x00);
+
+        const trackLen = trackEvents.length;
+        const trackHeader = [
+            0x4D, 0x54, 0x72, 0x6B,
+            (trackLen >> 24) & 0xFF,
+            (trackLen >> 16) & 0xFF,
+            (trackLen >> 8) & 0xFF,
+            trackLen & 0xFF
+        ];
+
+        const headerChunk = [
+            0x4D, 0x54, 0x68, 0x64,
+            0x00, 0x00, 0x00, 0x06,
+            0x00, 0x00,
+            0x00, 0x01,
+            (PPQ >> 8) & 0xFF,
+            PPQ & 0xFF
+        ];
+
+        return new Uint8Array([...headerChunk, ...trackHeader, ...trackEvents]);
+    }
+
+    function gerarEBaixarMIDI() {
+        try {
+            const res = gerarSequenciaNotasWeb();
+            const bpm = parseInt(document.getElementById('bpm').value) || 120;
+            const timeSig = document.getElementById('time-sig').value;
+            const temposComp = parseInt(timeSig.split('/')[0]) || 4;
+
+            let Mw = window.MidiWriter || window.MidiWriterJS || (typeof MidiWriter !== 'undefined' ? MidiWriter : null);
+            if (Mw) {
+                let track = new Mw.Track();
+                track.setTimeSignature(temposComp, 4);
+                track.setTempo(bpm);
+
+                let ritmoSel = document.getElementById('ritmo-select').value;
+                let ritmoStr = RITMOS[ritmoSel] || 'colcheia';
+                let itensRitmo = ritmoStr.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+                if (itensRitmo.length === 0) itensRitmo = ['colcheia'];
+
+                res.notas.forEach((nName, i) => {
+                    let rItem = itensRitmo[i % itensRitmo.length];
+                    let duracaoMw = '4';
+                    if (rItem.includes('semibreve')) duracaoMw = '1';
+                    else if (rItem.includes('minima') || rItem.includes('mínima')) duracaoMw = rItem.includes('pont') ? '2d' : '2';
+                    else if (rItem.includes('seminima') || rItem.includes('semínima')) duracaoMw = rItem.includes('pont') ? '4d' : '4';
+                    else if (rItem.includes('semicolcheia')) duracaoMw = rItem.includes('pont') ? '16d' : '16';
+                    else if (rItem.includes('colcheia')) duracaoMw = rItem.includes('pont') ? '8d' : '8';
+                    else if (rItem.includes('tercina')) duracaoMw = '8t';
+
+                    let noteObj = new Mw.NoteEvent({
+                        pitch: [nName],
+                        duration: duracaoMw
+                    });
+                    track.addEvent(noteObj);
+                });
+
+                let writer = new Mw.Writer([track]);
+                let uri = writer.dataUri();
+                let a = document.createElement('a');
+                a.href = uri;
+                a.download = "estudio_melodico_v2.5.mid";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } else {
+                // Built-in standalone binary MIDI generator (Zero external dependencies)
+                const midiBytes = gerarMIDIBytesWeb(res.notas, res.duracoes, bpm, temposComp);
+                const blob = new Blob([midiBytes], { type: 'audio/midi' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "estudio_melodico_v2.5.mid";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }
+        } catch(e) {
+            alert("Erro ao gerar MIDI: " + e.message);
+        }
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
